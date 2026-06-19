@@ -289,7 +289,7 @@ export default function App() {
               <div className="bg-blue-600 text-white p-1.5 rounded-lg mr-3 shadow-sm">
                 <Code size={20} />
               </div>
-              <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">LivePlayer</span>
+              <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">MundialGT</span>
             </div>
 
             <div className="flex space-x-1 sm:space-x-2 items-center">
