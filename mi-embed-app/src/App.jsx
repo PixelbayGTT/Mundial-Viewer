@@ -85,30 +85,14 @@ export default function App() {
     }
   };
 
-  const processEmbedCode = (code) => {
-    if (!code) return '';
-    if (code.includes('<iframe')) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = code;
-      const iframes = tempDiv.getElementsByTagName('iframe');
-      for (let i = 0; i < iframes.length; i++) {
-        const iframe = iframes[i];
-        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms allow-presentation');
-        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
-      }
-      return tempDiv.innerHTML;
-    }
-    return code;
-  };
-
   const handleSaveCode = async () => {
     if (!firebaseUser) return;
 
     setSaveStatus('saving');
     try {
-      const processedCode = processEmbedCode(draftCode);
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
-      await setDoc(docRef, { code: processedCode, updatedAt: new Date().toISOString() });
+      // Guardamos el draftCode directamente sin procesarlo
+      await setDoc(docRef, { code: draftCode, updatedAt: new Date().toISOString() });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
