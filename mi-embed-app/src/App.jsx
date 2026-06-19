@@ -32,7 +32,6 @@ export default function App() {
   const [draftCode, setDraftCode] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
 
-  // Efecto 1: Autenticación Anónima (Limpio para producción)
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -51,7 +50,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Efecto 2: Escuchar cambios en la base de datos
   useEffect(() => {
     if (!firebaseUser) return;
 
@@ -61,8 +59,10 @@ export default function App() {
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
-          setEmbedCode(data.code || '');
-          setDraftCode(data.code || '');
+          // Limpiamos también lo que viene de la base de datos por si quedó guardado sucio
+          const cleanCode = forceRemoveSandbox(data.code || '');
+          setEmbedCode(cleanCode);
+          setDraftCode(cleanCode);
         }
       },
       (error) => {
@@ -85,14 +85,34 @@ export default function App() {
     }
   };
 
+  // ESTA ES LA FUNCIÓN CLAVE AHORA: Destruye los atributos sandbox
+  const forceRemoveSandbox = (code) => {
+    if (!code) return '';
+    try {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = code;
+      const iframes = tempDiv.getElementsByTagName('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        // Nos aseguramos de eliminar absolutamente cualquier restricción
+        iframes[i].removeAttribute('sandbox');
+      }
+      return tempDiv.innerHTML;
+    } catch (e) {
+      return code;
+    }
+  };
+
   const handleSaveCode = async () => {
     if (!firebaseUser) return;
 
     setSaveStatus('saving');
     try {
+      // Limpiamos agresivamente el código antes de guardarlo en Firebase
+      const cleanDraft = forceRemoveSandbox(draftCode);
+      
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
-      // Guardamos el draftCode directamente sin procesarlo
-      await setDoc(docRef, { code: draftCode, updatedAt: new Date().toISOString() });
+      await setDoc(docRef, { code: cleanDraft, updatedAt: new Date().toISOString() });
+      
       setSaveStatus('success');
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
@@ -102,18 +122,17 @@ export default function App() {
   };
 
   const renderPublicView = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-64px)] w-full overflow-hidden">
-      <div className="w-full max-w-6xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden min-h-[500px] flex items-center justify-center p-2 sm:p-6 border border-gray-100 dark:border-gray-700">
+    <div className="flex-1 flex flex-col items-center justify-center bg-black min-h-[calc(100vh-64px)] w-full overflow-hidden">
+      <div className="w-full h-[calc(100vh-64px)] flex items-center justify-center">
         {embedCode ? (
           <div
-            className="w-full h-full flex justify-center items-center overflow-auto"
+            className="w-full h-full flex justify-center items-center overflow-hidden bg-black"
             dangerouslySetInnerHTML={{ __html: embedCode }}
           />
         ) : (
-          <div className="text-center text-gray-400 dark:text-gray-500 flex flex-col items-center p-6">
-            <Code size={64} className="mb-4 opacity-50 text-blue-400" />
-            <p className="text-xl font-medium">Sitio en construcción</p>
-            <p className="text-sm mt-2 max-w-md text-center">El contenido se mostrará aquí una vez que el administrador configure el código.</p>
+          <div className="text-center text-gray-500 flex flex-col items-center p-6">
+            <Code size={64} className="mb-4 opacity-50" />
+            <p className="text-xl font-medium">Esperando transmisión...</p>
           </div>
         )}
       </div>
@@ -198,16 +217,13 @@ export default function App() {
               <label className="block text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">
                 Pega tu código HTML/Iframe
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                La aplicación ajustará automáticamente los permisos (sandbox) para que funcione correctamente.
-              </p>
             </div>
 
             <textarea
               value={draftCode}
               onChange={(e) => setDraftCode(e.target.value)}
               className="flex-1 w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
-              placeholder='Ejemplo:&#10;<iframe width="560" height="315" src="https://www.youtube.com/embed/..." frameborder="0" allowfullscreen></iframe>'
+              placeholder='Ejemplo:&#10;<iframe width="560" height="315" src="..." frameborder="0" allowfullscreen></iframe>'
             />
 
             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -248,7 +264,7 @@ export default function App() {
               <Eye size={18} className="mr-2 text-gray-500"/>
               Vista Previa Actual
             </h3>
-            <div className="flex-1 bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-2 flex items-center justify-center overflow-auto relative">
+            <div className="flex-1 bg-black rounded-xl border border-gray-200 dark:border-gray-700 p-0 flex items-center justify-center overflow-hidden relative">
                {embedCode ? (
                   <div dangerouslySetInnerHTML={{ __html: embedCode }} className="w-full h-full flex justify-center items-center" />
                 ) : (
@@ -273,7 +289,7 @@ export default function App() {
               <div className="bg-blue-600 text-white p-1.5 rounded-lg mr-3 shadow-sm">
                 <Code size={20} />
               </div>
-              <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">EmbedViewer</span>
+              <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">LivePlayer</span>
             </div>
 
             <div className="flex space-x-1 sm:space-x-2 items-center">
