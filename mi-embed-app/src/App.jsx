@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Eye, Save, LogOut, CheckCircle, AlertCircle, Code, Calendar, Clock, Trash2, Plus, Radio } from 'lucide-react';
+import { Shield, Eye, Save, LogOut, CheckCircle, AlertCircle, Code, Calendar, Clock, Trash2, Plus, Radio, Search } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // ⚠️ IMPORTANTE: REEMPLAZA ESTO CON LOS DATOS DE TU FIREBASE ⚠️
 const firebaseConfig = {
-  apiKey: "AIzaSyCPulVLpKjrOX4WkiVCqyPqREMlef1G67U",
-  authDomain: "mundial-789c0.firebaseapp.com",
-  projectId: "mundial-789c0",
-  storageBucket: "mundial-789c0.firebasestorage.app",
-  messagingSenderId: "884676359615",
-  appId: "1:884676359615:web:0a28115b791b413b3bdd0a"
+  apiKey: "TU_API_KEY",
+  authDomain: "tu-proyecto.firebaseapp.com",
+  projectId: "tu-proyecto",
+  storageBucket: "tu-proyecto.appspot.com",
+  messagingSenderId: "TUS_NUMEROS",
+  appId: "TU_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -38,6 +38,10 @@ export default function App() {
   const [newMatch, setNewMatch] = useState({ 
     home: '', homeFlag: '', away: '', awayFlag: '', date: '', status: 'Próximamente' 
   });
+
+  // Estado para la Base de Datos desde tu API
+  const [matchDatabase, setMatchDatabase] = useState([]);
+  const [isLoadingDB, setIsLoadingDB] = useState(false);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -88,6 +92,40 @@ export default function App() {
       unsubSchedule();
     };
   }, [firebaseUser]);
+
+  // Cargar datos de la API externa cuando entra el Administrador
+  useEffect(() => {
+    if (view === 'admin' && isAdminLoggedIn) {
+      const fetchMatchDatabase = async () => {
+        setIsLoadingDB(true);
+        try {
+          const response = await fetch('https://worldcupfixtureapi.com/api/matches');
+          if (!response.ok) throw new Error('Error al conectar con la API');
+          
+          const data = await response.json();
+          
+          // Mapeamos los datos de la API para que coincidan con la estructura de la aplicación
+          // (Si tu API tiene nombres diferentes como "home_team" en vez de "home", se ajustan aquí)
+          const formattedData = data.map((item, index) => ({
+            id: item.id || `api-${index}`,
+            home: item.home || item.homeTeam || item.home_team || 'Local',
+            homeFlag: item.homeFlag || item.home_flag || '🏳️',
+            away: item.away || item.awayTeam || item.away_team || 'Visita',
+            awayFlag: item.awayFlag || item.away_flag || '🏴',
+            defaultTime: item.date || item.defaultTime || item.match_date || ''
+          }));
+          
+          setMatchDatabase(formattedData);
+        } catch (error) {
+          console.error("Error al obtener la API de partidos:", error);
+        } finally {
+          setIsLoadingDB(false);
+        }
+      };
+      
+      fetchMatchDatabase();
+    }
+  }, [view, isAdminLoggedIn]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -318,6 +356,46 @@ export default function App() {
           {/* Formulario Agregar Partido */}
           <form onSubmit={handleAddMatch} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Añadir Nuevo Partido</p>
+
+            {/* Buscador de Base de Datos Interna */}
+            <div className="mb-4 flex items-center bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2">
+              <Search size={18} className="text-gray-400 mr-2" />
+              <select
+                className="w-full bg-transparent outline-none text-gray-700 dark:text-white"
+                disabled={isLoadingDB}
+                onChange={(e) => {
+                  const matchId = e.target.value;
+                  if (!matchId) return;
+                  const template = matchDatabase.find(m => m.id === matchId);
+                  if (template) {
+                    setNewMatch({
+                      ...newMatch,
+                      home: template.home,
+                      homeFlag: template.homeFlag,
+                      away: template.away,
+                      awayFlag: template.awayFlag,
+                      date: template.defaultTime
+                    });
+                  }
+                }}
+              >
+                <option value="">
+                  {isLoadingDB ? "Descargando partidos desde tu API..." : "Buscar en la base de datos de la API..."}
+                </option>
+                {matchDatabase.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.homeFlag} {m.home} vs {m.awayFlag} {m.away}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center my-4">
+              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
+              <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">O ajusta los detalles manualmente</span>
+              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               <div className="md:col-span-3 flex gap-2">
                 <input type="text" placeholder="Bandera (🇺🇸)" value={newMatch.homeFlag} onChange={e=>setNewMatch({...newMatch, homeFlag: e.target.value})} className="w-16 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-center" required/>
