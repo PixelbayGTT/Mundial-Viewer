@@ -190,7 +190,7 @@ export default function App() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (loginUsername === 'admin' && loginPassword === '1234') {
+    if (loginUsername === 'admin' && loginPassword === 'MundialGT404') {
       setIsAdminLoggedIn(true);
       setLoginError('');
       setLoginUsername('');
@@ -303,7 +303,7 @@ export default function App() {
       <div className="w-full bg-blue-900 text-blue-100 text-xs sm:text-sm py-2.5 px-4 flex items-center justify-center border-b border-blue-950 shadow-inner">
         <AlertCircle size={18} className="mr-2.5 text-blue-300 flex-shrink-0" />
         <span className="text-center">
-          <strong className="text-white">💡 Tip:</strong> La transmisión puede tener ventanas de publicidad externas al hacer clic. Te recomendamos usar el navegador <strong>Brave</strong> o <strong>uBlock Origin</strong>.
+          <strong className="text-white">💡 Aviso:</strong> La transmisión es de un proveedor externo y puede tener ventanas de publicidad externas al hacer clic. Te recomendamos usar el navegador <strong>Brave</strong> o <strong>uBlock Origin</strong>.
         </span>
       </div>
 
