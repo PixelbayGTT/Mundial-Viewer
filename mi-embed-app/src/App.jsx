@@ -6,12 +6,12 @@ import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // ⚠️ IMPORTANTE: REEMPLAZA ESTO CON LOS DATOS DE TU FIREBASE ⚠️
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "tu-proyecto.firebaseapp.com",
-  projectId: "tu-proyecto",
-  storageBucket: "tu-proyecto.appspot.com",
-  messagingSenderId: "TUS_NUMEROS",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyCPulVLpKjrOX4WkiVCqyPqREMlef1G67U",
+  authDomain: "mundial-789c0.firebaseapp.com",
+  projectId: "mundial-789c0",
+  storageBucket: "mundial-789c0.firebasestorage.app",
+  messagingSenderId: "884676359615",
+  appId: "1:884676359615:web:0a28115b791b413b3bdd0a"
 };
 
 const app = initializeApp(firebaseConfig);
