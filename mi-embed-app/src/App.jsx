@@ -6,12 +6,12 @@ import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // ⚠️ IMPORTANTE: REEMPLAZA ESTO CON LOS DATOS DE TU FIREBASE ⚠️
 const firebaseConfig = {
-  apiKey: "AIzaSyCPulVLpKjrOX4WkiVCqyPqREMlef1G67U",
-  authDomain: "mundial-789c0.firebaseapp.com",
-  projectId: "mundial-789c0",
-  storageBucket: "mundial-789c0.firebasestorage.app",
-  messagingSenderId: "884676359615",
-  appId: "1:884676359615:web:0a28115b791b413b3bdd0a"
+  apiKey: "TU_API_KEY",
+  authDomain: "tu-proyecto.firebaseapp.com",
+  projectId: "tu-proyecto",
+  storageBucket: "tu-proyecto.appspot.com",
+  messagingSenderId: "TUS_NUMEROS",
+  appId: "TU_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -33,19 +33,37 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState('');
 
   const [botUrl, setBotUrl] = useState('');
-  const [botStreamId, setBotStreamId] = useState(''); // NUEVO: Estado para el ID del stream
+  const [botStreamId, setBotStreamId] = useState(''); 
   const [botStatus, setBotStatus] = useState('idle');
   const [botMessage, setBotMessage] = useState('');
 
   useEffect(() => {
     const initAuth = async () => {
+      try {
+        await signInAnonymously(auth);
+      } catch (error) {
+        console.error("Error al conectar con Firebase:", error);
+      }
+    };
+
+    initAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!firebaseUser) return;
+
     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
 
     const unsubscribe = onSnapshot(docRef,
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
-          // Limpiamos también lo que viene de la base de datos por si quedó guardado sucio
           const cleanCode = forceRemoveSandbox(data.code || '');
           setEmbedCode(cleanCode);
           setDraftCode(cleanCode);
@@ -71,7 +89,6 @@ export default function App() {
     }
   };
 
-  // ESTA ES LA FUNCIÓN CLAVE AHORA: Destruye los atributos sandbox
   const forceRemoveSandbox = (code) => {
     if (!code) return '';
     try {
@@ -79,7 +96,6 @@ export default function App() {
       tempDiv.innerHTML = code;
       const iframes = tempDiv.getElementsByTagName('iframe');
       for (let i = 0; i < iframes.length; i++) {
-        // Nos aseguramos de eliminar absolutamente cualquier restricción
         iframes[i].removeAttribute('sandbox');
       }
       return tempDiv.innerHTML;
@@ -89,11 +105,8 @@ export default function App() {
   };
 
   const handleSaveCode = async () => {
-    if (!firebaseUser) return;
-
     setSaveStatus('saving');
     try {
-      // Limpiamos agresivamente el código antes de guardarlo en Firebase
       const cleanDraft = forceRemoveSandbox(draftCode);
       
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
@@ -118,7 +131,6 @@ export default function App() {
     setBotMessage('Analizando la página destino...');
 
     try {
-      // Usamos un proxy (allorigins) para poder leer otras páginas web
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(botUrl)}`;
       const response = await fetch(proxyUrl);
 
@@ -137,21 +149,15 @@ export default function App() {
         );
 
         if (videoIframes.length > 0) {
-          
-          // --- NUEVA LÓGICA MÁGICA DEL BOT ---
           if (botStreamId) {
-            // Si pusiste un número (ej. 11), el bot reescribe el enlace por ti
             videoIframes = videoIframes.map(iframe => {
-              // Encuentra el número al final de la URL (ej. /1) y lo cambia por el tuyo (ej. /11)
               return iframe.replace(/(src=["'][^"']+\/)(\d+)(["'])/i, `$1${botStreamId}$3`)
                            .replace(/(stream=)(\d+)/i, `$1${botStreamId}`);
             });
-            videoIframes = [...new Set(videoIframes)]; // Quita duplicados
+            videoIframes = [...new Set(videoIframes)]; 
           }
-          // -----------------------------------
 
           const allFoundCode = videoIframes.join('\n\n<!-- ⬆️ OPCIÓN 1 | ⬇️ OPCIÓN 2 -->\n\n');
-          
           setDraftCode(allFoundCode);
           
           if (videoIframes.length === 1) {
@@ -271,12 +277,7 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {}
-          {/* Columna Izquierda: Bot Extractor + Editor */}
           <div className="flex flex-col gap-6 h-[500px]">
-            
-            {/* Nuevo Panel del Bot Automatizado */}
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-sm border border-blue-500 p-5 shrink-0">
               <div className="mb-3">
                 <h3 className="text-lg font-bold text-white flex items-center">
@@ -330,7 +331,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Editor Manual Reducido */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex flex-col flex-1 overflow-hidden">
               <div className="mb-4">
                 <label className="block text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">
