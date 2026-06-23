@@ -495,6 +495,13 @@ export default function App() {
             </div>
 
             <div className="flex space-x-1 sm:space-x-2 items-center">
+              {/* Botón de Cerrar Sesión para Usuarios Públicos */}
+              {view === 'public' && firebaseUser && (
+                <button onClick={() => signOut(auth)} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors mr-2">
+                  Salir
+                </button>
+              )}
+              
               <button onClick={() => setView('public')} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold flex items-center ${view === 'public' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
                 <Eye size={16} className="sm:mr-2" /> <span className="hidden sm:inline">Público</span>
               </button>
@@ -507,7 +514,9 @@ export default function App() {
       </nav>
 
       <main className="flex-1 flex flex-col">
-        {view === 'public' && renderPublicView()}
+        {/* Lógica maestra de qué mostrar */}
+        {view === 'public' && !firebaseUser && renderPublicLogin()}
+        {view === 'public' && firebaseUser && renderPublicView()}
         {view === 'admin' && !isAdminLoggedIn && renderLogin()}
         {view === 'admin' && isAdminLoggedIn && renderAdminPanel()}
       </main>
