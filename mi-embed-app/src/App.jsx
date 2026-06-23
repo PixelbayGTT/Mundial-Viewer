@@ -6,12 +6,12 @@ import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // ⚠️ IMPORTANTE: REEMPLAZA ESTO CON LOS DATOS DE TU FIREBASE ⚠️
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "tu-proyecto.firebaseapp.com",
-  projectId: "tu-proyecto",
-  storageBucket: "tu-proyecto.appspot.com",
-  messagingSenderId: "TUS_NUMEROS",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyCPulVLpKjrOX4WkiVCqyPqREMlef1G67U",
+  authDomain: "mundial-789c0.firebaseapp.com",
+  projectId: "mundial-789c0",
+  storageBucket: "mundial-789c0.firebasestorage.app",
+  messagingSenderId: "884676359615",
+  appId: "1:884676359615:web:0a28115b791b413b3bdd0a"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -33,12 +33,12 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState('');
 
   const [botUrl, setBotUrl] = useState('');
+  const [botStreamId, setBotStreamId] = useState(''); // NUEVO: Estado para el ID del stream
   const [botStatus, setBotStatus] = useState('idle');
   const [botMessage, setBotMessage] = useState('');
 
   useEffect(() => {
-    if (!firebaseUser) return;
-
+    const initAuth = async () => {
     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
 
     const unsubscribe = onSnapshot(docRef,
@@ -118,7 +118,7 @@ export default function App() {
     setBotMessage('Analizando la página destino...');
 
     try {
-      // Usamos un proxy (allorigins) para poder leer otras páginas web desde el navegador y saltar restricciones CORS
+      // Usamos un proxy (allorigins) para poder leer otras páginas web
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(botUrl)}`;
       const response = await fetch(proxyUrl);
 
@@ -129,39 +129,45 @@ export default function App() {
 
       if (!html) throw new Error('Página vacía');
 
-      // Buscamos todas las etiquetas <iframe> en el código fuente de la página secreta
       const iframes = html.match(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi);
 
       if (iframes && iframes.length > 0) {
-        // Filtramos para quedarnos solo con los iframes que probablemente sean reproductores de video
-        const videoIframes = iframes.filter(iframe => 
+        let videoIframes = iframes.filter(iframe => 
           iframe.toLowerCase().includes('embed') || iframe.toLowerCase().includes('allowfullscreen')
         );
 
         if (videoIframes.length > 0) {
-          // Unimos todos los reproductores encontrados con un separador claro
+          
+          // --- NUEVA LÓGICA MÁGICA DEL BOT ---
+          if (botStreamId) {
+            // Si pusiste un número (ej. 11), el bot reescribe el enlace por ti
+            videoIframes = videoIframes.map(iframe => {
+              // Encuentra el número al final de la URL (ej. /1) y lo cambia por el tuyo (ej. /11)
+              return iframe.replace(/(src=["'][^"']+\/)(\d+)(["'])/i, `$1${botStreamId}$3`)
+                           .replace(/(stream=)(\d+)/i, `$1${botStreamId}`);
+            });
+            videoIframes = [...new Set(videoIframes)]; // Quita duplicados
+          }
+          // -----------------------------------
+
           const allFoundCode = videoIframes.join('\n\n<!-- ⬆️ OPCIÓN 1 | ⬇️ OPCIÓN 2 -->\n\n');
           
-          // Lo colocamos en el editor visualmente
           setDraftCode(allFoundCode);
           
           if (videoIframes.length === 1) {
-            // Si solo hay uno, lo guardamos automáticamente en Firebase
             const cleanDraft = forceRemoveSandbox(allFoundCode);
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
             await setDoc(docRef, { code: cleanDraft, updatedAt: new Date().toISOString() });
             
             setBotStatus('success');
-            setBotMessage('¡Partido encontrado y publicado automáticamente!');
+            setBotMessage(`¡Partido encontrado${botStreamId ? ` (Cambiado a Stream ${botStreamId})` : ''} y publicado!`);
           } else {
-            // Si hay varios (ej. Inglés y Español), no publicamos automáticamente.
-            // Dejamos que el usuario borre el incorrecto y guarde manual.
             setBotStatus('success');
-            setBotMessage(`¡Encontré ${videoIframes.length} reproductores! Revisa abajo, borra el de inglés y dale a "Aplicar Cambios".`);
+            setBotMessage(`¡Encontré reproductores! Revisa abajo y dale a "Aplicar Cambios".`);
           }
         } else {
           setBotStatus('error');
-          setBotMessage('Se encontraron iframes, pero ninguno parece ser un reproductor de video.');
+          setBotMessage('Se encontraron iframes, pero ninguno parece ser de video.');
         }
       } else {
         setBotStatus('error');
@@ -277,28 +283,40 @@ export default function App() {
                   🤖 Bot Auto-Extractor
                 </h3>
                 <p className="text-xs text-blue-100 mt-1">
-                  Pega el link de la página externa. El bot detectará el iframe y actualizará la transmisión al instante.
+                  Pega el link de la página externa. Si sabes el número de canal (ej. 11 para Telemundo), ponlo abajo y el bot lo elegirá por ti.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col gap-3">
                 <input
                   type="url"
                   value={botUrl}
                   onChange={(e) => setBotUrl(e.target.value)}
                   placeholder="Link de la página web externa..."
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-white/20 bg-black/20 text-white placeholder-blue-200 focus:ring-2 focus:ring-white outline-none text-sm transition-all"
+                  className="w-full px-4 py-2.5 rounded-xl border border-white/20 bg-black/20 text-white placeholder-blue-200 focus:ring-2 focus:ring-white outline-none text-sm transition-all"
                 />
-                <button
-                  onClick={handleRunBot}
-                  disabled={botStatus === 'loading'}
-                  className="px-5 py-2.5 bg-white text-blue-700 hover:bg-gray-100 disabled:opacity-70 font-bold rounded-xl transition-colors shadow-md text-sm whitespace-nowrap flex items-center justify-center"
-                >
-                  {botStatus === 'loading' ? (
-                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                  ) : null}
-                  Extraer Código
-                </button>
+                
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="number"
+                    value={botStreamId}
+                    onChange={(e) => setBotStreamId(e.target.value)}
+                    placeholder="Nº Stream (Ej: 11)"
+                    className="w-full sm:w-1/3 px-4 py-2.5 rounded-xl border border-white/20 bg-black/20 text-white placeholder-blue-200 focus:ring-2 focus:ring-white outline-none text-sm transition-all font-mono"
+                    title="Pon el número del stream que quieres (ej. 11 para Telemundo)"
+                  />
+                  
+                  <button
+                    onClick={handleRunBot}
+                    disabled={botStatus === 'loading'}
+                    className="flex-1 px-5 py-2.5 bg-white text-blue-700 hover:bg-gray-100 disabled:opacity-70 font-bold rounded-xl transition-colors shadow-md text-sm flex items-center justify-center"
+                  >
+                    {botStatus === 'loading' ? (
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                    ) : null}
+                    Extraer Código
+                  </button>
+                </div>
               </div>
 
               {botMessage && (
