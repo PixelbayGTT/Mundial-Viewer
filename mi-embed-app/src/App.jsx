@@ -6,12 +6,12 @@ import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // ⚠️ IMPORTANTE: REEMPLAZA ESTO CON LOS DATOS DE TU FIREBASE ⚠️
 const firebaseConfig = {
-  apiKey: "AIzaSyCPulVLpKjrOX4WkiVCqyPqREMlef1G67U",
-  authDomain: "mundial-789c0.firebaseapp.com",
-  projectId: "mundial-789c0",
-  storageBucket: "mundial-789c0.firebasestorage.app",
-  messagingSenderId: "884676359615",
-  appId: "1:884676359615:web:0a28115b791b413b3bdd0a"
+  apiKey: "TU_API_KEY",
+  authDomain: "tu-proyecto.firebaseapp.com",
+  projectId: "tu-proyecto",
+  storageBucket: "tu-proyecto.appspot.com",
+  messagingSenderId: "TUS_NUMEROS",
+  appId: "TU_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -32,23 +32,9 @@ export default function App() {
   const [draftCode, setDraftCode] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (error) {
-        console.error("Error al conectar con Firebase:", error);
-      }
-    };
-
-    initAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const [botUrl, setBotUrl] = useState('');
+  const [botStatus, setBotStatus] = useState('idle');
+  const [botMessage, setBotMessage] = useState('');
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -118,6 +104,73 @@ export default function App() {
     } catch (error) {
       console.error("Error al guardar:", error);
       setSaveStatus('error');
+    }
+  };
+
+  const handleRunBot = async () => {
+    if (!botUrl) {
+      setBotMessage("Por favor, ingresa una URL válida.");
+      setBotStatus('error');
+      return;
+    }
+
+    setBotStatus('loading');
+    setBotMessage('Analizando la página destino...');
+
+    try {
+      // Usamos un proxy (allorigins) para poder leer otras páginas web desde el navegador y saltar restricciones CORS
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(botUrl)}`;
+      const response = await fetch(proxyUrl);
+
+      if (!response.ok) throw new Error('Error en la red');
+
+      const data = await response.json();
+      const html = data.contents;
+
+      if (!html) throw new Error('Página vacía');
+
+      // Buscamos todas las etiquetas <iframe> en el código fuente de la página secreta
+      const iframes = html.match(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi);
+
+      if (iframes && iframes.length > 0) {
+        // Filtramos para quedarnos solo con los iframes que probablemente sean reproductores de video
+        const videoIframes = iframes.filter(iframe => 
+          iframe.toLowerCase().includes('embed') || iframe.toLowerCase().includes('allowfullscreen')
+        );
+
+        if (videoIframes.length > 0) {
+          // Unimos todos los reproductores encontrados con un separador claro
+          const allFoundCode = videoIframes.join('\n\n<!-- ⬆️ OPCIÓN 1 | ⬇️ OPCIÓN 2 -->\n\n');
+          
+          // Lo colocamos en el editor visualmente
+          setDraftCode(allFoundCode);
+          
+          if (videoIframes.length === 1) {
+            // Si solo hay uno, lo guardamos automáticamente en Firebase
+            const cleanDraft = forceRemoveSandbox(allFoundCode);
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
+            await setDoc(docRef, { code: cleanDraft, updatedAt: new Date().toISOString() });
+            
+            setBotStatus('success');
+            setBotMessage('¡Partido encontrado y publicado automáticamente!');
+          } else {
+            // Si hay varios (ej. Inglés y Español), no publicamos automáticamente.
+            // Dejamos que el usuario borre el incorrecto y guarde manual.
+            setBotStatus('success');
+            setBotMessage(`¡Encontré ${videoIframes.length} reproductores! Revisa abajo, borra el de inglés y dale a "Aplicar Cambios".`);
+          }
+        } else {
+          setBotStatus('error');
+          setBotMessage('Se encontraron iframes, pero ninguno parece ser un reproductor de video.');
+        }
+      } else {
+        setBotStatus('error');
+        setBotMessage('No se encontró ningún reproductor de video en esa URL.');
+      }
+    } catch (error) {
+      console.error("Error del bot:", error);
+      setBotStatus('error');
+      setBotMessage('Error de conexión. La página fuente bloqueó el análisis.');
     }
   };
 
@@ -212,50 +265,99 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex flex-col h-[500px]">
-            <div className="mb-4">
-              <label className="block text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                Pega tu código HTML/Iframe
-              </label>
-            </div>
-
-            <textarea
-              value={draftCode}
-              onChange={(e) => setDraftCode(e.target.value)}
-              className="flex-1 w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
-              placeholder='Ejemplo:&#10;<iframe width="560" height="315" src="..." frameborder="0" allowfullscreen></iframe>'
-            />
-
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex-1 w-full">
-                {saveStatus === 'success' && (
-                  <span className="flex items-center text-green-600 dark:text-green-400 text-sm font-medium bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg">
-                    <CheckCircle size={16} className="mr-1.5" />
-                    Actualizado en vivo
-                  </span>
-                )}
-                {saveStatus === 'error' && (
-                  <span className="flex items-center text-red-600 text-sm font-medium bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg">
-                    <AlertCircle size={16} className="mr-1.5" />
-                    Error al guardar
-                  </span>
-                )}
-                {saveStatus === 'saving' && (
-                  <span className="flex items-center text-blue-600 text-sm font-medium px-3 py-1.5">
-                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Guardando...
-                  </span>
-                )}
+          
+          {}
+          {/* Columna Izquierda: Bot Extractor + Editor */}
+          <div className="flex flex-col gap-6 h-[500px]">
+            
+            {/* Nuevo Panel del Bot Automatizado */}
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-sm border border-blue-500 p-5 shrink-0">
+              <div className="mb-3">
+                <h3 className="text-lg font-bold text-white flex items-center">
+                  🤖 Bot Auto-Extractor
+                </h3>
+                <p className="text-xs text-blue-100 mt-1">
+                  Pega el link de la página externa. El bot detectará el iframe y actualizará la transmisión al instante.
+                </p>
               </div>
 
-              <button
-                onClick={handleSaveCode}
-                disabled={saveStatus === 'saving'}
-                className="w-full sm:w-auto flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors focus:ring-4 focus:ring-blue-500/50 outline-none shadow-md"
-              >
-                <Save size={18} className="mr-2" />
-                Aplicar Cambios
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="url"
+                  value={botUrl}
+                  onChange={(e) => setBotUrl(e.target.value)}
+                  placeholder="Link de la página web externa..."
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-white/20 bg-black/20 text-white placeholder-blue-200 focus:ring-2 focus:ring-white outline-none text-sm transition-all"
+                />
+                <button
+                  onClick={handleRunBot}
+                  disabled={botStatus === 'loading'}
+                  className="px-5 py-2.5 bg-white text-blue-700 hover:bg-gray-100 disabled:opacity-70 font-bold rounded-xl transition-colors shadow-md text-sm whitespace-nowrap flex items-center justify-center"
+                >
+                  {botStatus === 'loading' ? (
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                  ) : null}
+                  Extraer Código
+                </button>
+              </div>
+
+              {botMessage && (
+                <div className={`mt-3 px-3 py-2 rounded-lg text-sm font-medium ${
+                  botStatus === 'success' ? 'bg-green-400/20 text-green-50 border border-green-400/30' :
+                  botStatus === 'error' ? 'bg-red-400/20 text-red-50 border border-red-400/30' :
+                  'bg-white/10 text-white border border-white/20'
+                }`}>
+                  {botMessage}
+                </div>
+              )}
+            </div>
+
+            {/* Editor Manual Reducido */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex flex-col flex-1 overflow-hidden">
+              <div className="mb-4">
+                <label className="block text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                  Editor Manual de Iframe
+                </label>
+              </div>
+
+              <textarea
+                value={draftCode}
+                onChange={(e) => setDraftCode(e.target.value)}
+                className="flex-1 w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                placeholder='Ejemplo:&#10;<iframe width="560" height="315" src="..." frameborder="0" allowfullscreen></iframe>'
+              />
+
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex-1 w-full">
+                  {saveStatus === 'success' && (
+                    <span className="flex items-center text-green-600 dark:text-green-400 text-sm font-medium bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg">
+                      <CheckCircle size={16} className="mr-1.5" />
+                      Actualizado en vivo
+                    </span>
+                  )}
+                  {saveStatus === 'error' && (
+                    <span className="flex items-center text-red-600 text-sm font-medium bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg">
+                      <AlertCircle size={16} className="mr-1.5" />
+                      Error al guardar
+                    </span>
+                  )}
+                  {saveStatus === 'saving' && (
+                    <span className="flex items-center text-blue-600 text-sm font-medium px-3 py-1.5">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Guardando...
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleSaveCode}
+                  disabled={saveStatus === 'saving'}
+                  className="w-full sm:w-auto flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors focus:ring-4 focus:ring-blue-500/50 outline-none shadow-md"
+                >
+                  <Save size={18} className="mr-2" />
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
 
@@ -289,7 +391,7 @@ export default function App() {
               <div className="bg-blue-600 text-white p-1.5 rounded-lg mr-3 shadow-sm">
                 <Code size={20} />
               </div>
-              <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">MundialGT</span>
+              <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">LivePlayer</span>
             </div>
 
             <div className="flex space-x-1 sm:space-x-2 items-center">
