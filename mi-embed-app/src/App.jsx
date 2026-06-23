@@ -19,6 +19,102 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = "mi-sitio-produccion";
 
+const RAW_API_DATA = {
+  "matches": [
+    {"id":"wc2026-537327","kickoff":{"utc":"2026-06-11T19:00:00Z"},"homeTeam":{"name":"Mexico","crestUrl":"https://crests.football-data.org/769.svg"},"awayTeam":{"name":"South Africa","crestUrl":"https://crests.football-data.org/9396.svg"}},
+    {"id":"wc2026-537328","kickoff":{"utc":"2026-06-12T02:00:00Z"},"homeTeam":{"name":"South Korea","crestUrl":"https://crests.football-data.org/772.png"},"awayTeam":{"name":"Czechia","crestUrl":"https://crests.football-data.org/798.svg"}},
+    {"id":"wc2026-537333","kickoff":{"utc":"2026-06-12T19:00:00Z"},"homeTeam":{"name":"Canada","crestUrl":"https://crests.football-data.org/canada.svg"},"awayTeam":{"name":"Bosnia-Herzegovina","crestUrl":"https://crests.football-data.org/bosnia.svg"}},
+    {"id":"wc2026-537345","kickoff":{"utc":"2026-06-13T01:00:00Z"},"homeTeam":{"name":"United States","crestUrl":"https://crests.football-data.org/usa.svg"},"awayTeam":{"name":"Paraguay","crestUrl":"https://crests.football-data.org/761.svg"}},
+    {"id":"wc2026-537334","kickoff":{"utc":"2026-06-13T19:00:00Z"},"homeTeam":{"name":"Qatar","crestUrl":"https://crests.football-data.org/8030.svg"},"awayTeam":{"name":"Switzerland","crestUrl":"https://crests.football-data.org/788.svg"}},
+    {"id":"wc2026-537339","kickoff":{"utc":"2026-06-13T22:00:00Z"},"homeTeam":{"name":"Brazil","crestUrl":"https://crests.football-data.org/764.svg"},"awayTeam":{"name":"Morocco","crestUrl":"https://crests.football-data.org/morocco.svg"}},
+    {"id":"wc2026-537340","kickoff":{"utc":"2026-06-14T01:00:00Z"},"homeTeam":{"name":"Haiti","crestUrl":"https://crests.football-data.org/haiti.svg"},"awayTeam":{"name":"Scotland","crestUrl":"https://crests.football-data.org/814.svg"}},
+    {"id":"wc2026-537346","kickoff":{"utc":"2026-06-14T04:00:00Z"},"homeTeam":{"name":"Australia","crestUrl":"https://crests.football-data.org/779.svg"},"awayTeam":{"name":"Turkey","crestUrl":"https://crests.football-data.org/803.svg"}},
+    {"id":"wc2026-537351","kickoff":{"utc":"2026-06-14T17:00:00Z"},"homeTeam":{"name":"Germany","crestUrl":"https://crests.football-data.org/759.svg"},"awayTeam":{"name":"Curaçao","crestUrl":"https://crests.football-data.org/curacao.svg"}},
+    {"id":"wc2026-537357","kickoff":{"utc":"2026-06-14T20:00:00Z"},"homeTeam":{"name":"Netherlands","crestUrl":"https://crests.football-data.org/8601.svg"},"awayTeam":{"name":"Japan","crestUrl":"https://crests.football-data.org/766.svg"}},
+    {"id":"wc2026-537352","kickoff":{"utc":"2026-06-14T23:00:00Z"},"homeTeam":{"name":"Ivory Coast","crestUrl":"https://crests.football-data.org/787.svg"},"awayTeam":{"name":"Ecuador","crestUrl":"https://crests.football-data.org/791.svg"}},
+    {"id":"wc2026-537358","kickoff":{"utc":"2026-06-15T02:00:00Z"},"homeTeam":{"name":"Sweden","crestUrl":"https://crests.football-data.org/792.svg"},"awayTeam":{"name":"Tunisia","crestUrl":"https://crests.football-data.org/tunisia.svg"}},
+    {"id":"wc2026-537369","kickoff":{"utc":"2026-06-15T16:00:00Z"},"homeTeam":{"name":"Spain","crestUrl":"https://crests.football-data.org/760.svg"},"awayTeam":{"name":"Cape Verde Islands","crestUrl":"https://crests.football-data.org/cape_verde.svg"}},
+    {"id":"wc2026-537363","kickoff":{"utc":"2026-06-15T19:00:00Z"},"homeTeam":{"name":"Belgium","crestUrl":"https://crests.football-data.org/805.svg"},"awayTeam":{"name":"Egypt","crestUrl":"https://crests.football-data.org/825.svg"}},
+    {"id":"wc2026-537370","kickoff":{"utc":"2026-06-15T22:00:00Z"},"homeTeam":{"name":"Saudi Arabia","crestUrl":"https://crests.football-data.org/saudi_arabia.svg"},"awayTeam":{"name":"Uruguay","crestUrl":"https://crests.football-data.org/758.svg"}},
+    {"id":"wc2026-537364","kickoff":{"utc":"2026-06-16T01:00:00Z"},"homeTeam":{"name":"Iran","crestUrl":"https://crests.football-data.org/iran.svg"},"awayTeam":{"name":"New Zealand","crestUrl":"https://crests.football-data.org/783.svg"}},
+    {"id":"wc2026-537391","kickoff":{"utc":"2026-06-16T19:00:00Z"},"homeTeam":{"name":"France","crestUrl":"https://crests.football-data.org/773.svg"},"awayTeam":{"name":"Senegal","crestUrl":"https://crests.football-data.org/senegal.svg"}},
+    {"id":"wc2026-537392","kickoff":{"utc":"2026-06-16T22:00:00Z"},"homeTeam":{"name":"Iraq","crestUrl":"https://crests.football-data.org/iraq.svg"},"awayTeam":{"name":"Norway","crestUrl":"https://crests.football-data.org/813.svg"}},
+    {"id":"wc2026-537397","kickoff":{"utc":"2026-06-17T01:00:00Z"},"homeTeam":{"name":"Argentina","crestUrl":"https://crests.football-data.org/762.png"},"awayTeam":{"name":"Algeria","crestUrl":"https://crests.football-data.org/algeria.svg"}},
+    {"id":"wc2026-537398","kickoff":{"utc":"2026-06-17T04:00:00Z"},"homeTeam":{"name":"Austria","crestUrl":"https://crests.football-data.org/816.svg"},"awayTeam":{"name":"Jordan","crestUrl":"https://crests.football-data.org/8049.png"}},
+    {"id":"wc2026-537403","kickoff":{"utc":"2026-06-17T17:00:00Z"},"homeTeam":{"name":"Portugal","crestUrl":"https://crests.football-data.org/765.svg"},"awayTeam":{"name":"Congo DR","crestUrl":"https://crests.football-data.org/congo_dr.svg"}},
+    {"id":"wc2026-537409","kickoff":{"utc":"2026-06-17T20:00:00Z"},"homeTeam":{"name":"England","crestUrl":"https://crests.football-data.org/770.svg"},"awayTeam":{"name":"Croatia","crestUrl":"https://crests.football-data.org/799.svg"}},
+    {"id":"wc2026-537410","kickoff":{"utc":"2026-06-17T23:00:00Z"},"homeTeam":{"name":"Ghana","crestUrl":"https://crests.football-data.org/ghana.svg"},"awayTeam":{"name":"Panama","crestUrl":"https://crests.football-data.org/panama.svg"}},
+    {"id":"wc2026-537404","kickoff":{"utc":"2026-06-18T02:00:00Z"},"homeTeam":{"name":"Uzbekistan","crestUrl":"https://crests.football-data.org/8070.png"},"awayTeam":{"name":"Colombia","crestUrl":"https://crests.football-data.org/818.svg"}},
+    {"id":"wc2026-537329","kickoff":{"utc":"2026-06-18T16:00:00Z"},"homeTeam":{"name":"Czechia","crestUrl":"https://crests.football-data.org/798.svg"},"awayTeam":{"name":"South Africa","crestUrl":"https://crests.football-data.org/9396.svg"}},
+    {"id":"wc2026-537335","kickoff":{"utc":"2026-06-18T19:00:00Z"},"homeTeam":{"name":"Switzerland","crestUrl":"https://crests.football-data.org/788.svg"},"awayTeam":{"name":"Bosnia-Herzegovina","crestUrl":"https://crests.football-data.org/bosnia.svg"}},
+    {"id":"wc2026-537336","kickoff":{"utc":"2026-06-18T22:00:00Z"},"homeTeam":{"name":"Canada","crestUrl":"https://crests.football-data.org/canada.svg"},"awayTeam":{"name":"Qatar","crestUrl":"https://crests.football-data.org/8030.svg"}},
+    {"id":"wc2026-537330","kickoff":{"utc":"2026-06-19T01:00:00Z"},"homeTeam":{"name":"Mexico","crestUrl":"https://crests.football-data.org/769.svg"},"awayTeam":{"name":"South Korea","crestUrl":"https://crests.football-data.org/772.png"}},
+    {"id":"wc2026-537348","kickoff":{"utc":"2026-06-19T19:00:00Z"},"homeTeam":{"name":"United States","crestUrl":"https://crests.football-data.org/usa.svg"},"awayTeam":{"name":"Australia","crestUrl":"https://crests.football-data.org/779.svg"}},
+    {"id":"wc2026-537342","kickoff":{"utc":"2026-06-19T22:00:00Z"},"homeTeam":{"name":"Scotland","crestUrl":"https://crests.football-data.org/814.svg"},"awayTeam":{"name":"Morocco","crestUrl":"https://crests.football-data.org/morocco.svg"}},
+    {"id":"wc2026-537341","kickoff":{"utc":"2026-06-20T00:30:00Z"},"homeTeam":{"name":"Brazil","crestUrl":"https://crests.football-data.org/764.svg"},"awayTeam":{"name":"Haiti","crestUrl":"https://crests.football-data.org/haiti.svg"}},
+    {"id":"wc2026-537347","kickoff":{"utc":"2026-06-20T03:00:00Z"},"homeTeam":{"name":"Turkey","crestUrl":"https://crests.football-data.org/803.svg"},"awayTeam":{"name":"Paraguay","crestUrl":"https://crests.football-data.org/761.svg"}},
+    {"id":"wc2026-537359","kickoff":{"utc":"2026-06-20T17:00:00Z"},"homeTeam":{"name":"Netherlands","crestUrl":"https://crests.football-data.org/8601.svg"},"awayTeam":{"name":"Sweden","crestUrl":"https://crests.football-data.org/792.svg"}},
+    {"id":"wc2026-537353","kickoff":{"utc":"2026-06-20T20:00:00Z"},"homeTeam":{"name":"Germany","crestUrl":"https://crests.football-data.org/759.svg"},"awayTeam":{"name":"Ivory Coast","crestUrl":"https://crests.football-data.org/787.svg"}},
+    {"id":"wc2026-537354","kickoff":{"utc":"2026-06-21T00:00:00Z"},"homeTeam":{"name":"Ecuador","crestUrl":"https://crests.football-data.org/791.svg"},"awayTeam":{"name":"Curaçao","crestUrl":"https://crests.football-data.org/curacao.svg"}},
+    {"id":"wc2026-537360","kickoff":{"utc":"2026-06-21T04:00:00Z"},"homeTeam":{"name":"Tunisia","crestUrl":"https://crests.football-data.org/tunisia.svg"},"awayTeam":{"name":"Japan","crestUrl":"https://crests.football-data.org/766.svg"}},
+    {"id":"wc2026-537371","kickoff":{"utc":"2026-06-21T16:00:00Z"},"homeTeam":{"name":"Spain","crestUrl":"https://crests.football-data.org/760.svg"},"awayTeam":{"name":"Saudi Arabia","crestUrl":"https://crests.football-data.org/saudi_arabia.svg"}},
+    {"id":"wc2026-537365","kickoff":{"utc":"2026-06-21T19:00:00Z"},"homeTeam":{"name":"Belgium","crestUrl":"https://crests.football-data.org/805.svg"},"awayTeam":{"name":"Iran","crestUrl":"https://crests.football-data.org/iran.svg"}},
+    {"id":"wc2026-537372","kickoff":{"utc":"2026-06-21T22:00:00Z"},"homeTeam":{"name":"Uruguay","crestUrl":"https://crests.football-data.org/758.svg"},"awayTeam":{"name":"Cape Verde Islands","crestUrl":"https://crests.football-data.org/cape_verde.svg"}},
+    {"id":"wc2026-537366","kickoff":{"utc":"2026-06-22T01:00:00Z"},"homeTeam":{"name":"New Zealand","crestUrl":"https://crests.football-data.org/783.svg"},"awayTeam":{"name":"Egypt","crestUrl":"https://crests.football-data.org/825.svg"}},
+    {"id":"wc2026-537399","kickoff":{"utc":"2026-06-22T17:00:00Z"},"homeTeam":{"name":"Argentina","crestUrl":"https://crests.football-data.org/762.png"},"awayTeam":{"name":"Austria","crestUrl":"https://crests.football-data.org/816.svg"}},
+    {"id":"wc2026-537393","kickoff":{"utc":"2026-06-22T21:00:00Z"},"homeTeam":{"name":"France","crestUrl":"https://crests.football-data.org/773.svg"},"awayTeam":{"name":"Iraq","crestUrl":"https://crests.football-data.org/iraq.svg"}},
+    {"id":"wc2026-537394","kickoff":{"utc":"2026-06-23T00:00:00Z"},"homeTeam":{"name":"Norway","crestUrl":"https://crests.football-data.org/813.svg"},"awayTeam":{"name":"Senegal","crestUrl":"https://crests.football-data.org/senegal.svg"}},
+    {"id":"wc2026-537400","kickoff":{"utc":"2026-06-23T03:00:00Z"},"homeTeam":{"name":"Jordan","crestUrl":"https://crests.football-data.org/8049.png"},"awayTeam":{"name":"Algeria","crestUrl":"https://crests.football-data.org/algeria.svg"}},
+    {"id":"wc2026-537405","kickoff":{"utc":"2026-06-23T17:00:00Z"},"homeTeam":{"name":"Portugal","crestUrl":"https://crests.football-data.org/765.svg"},"awayTeam":{"name":"Uzbekistan","crestUrl":"https://crests.football-data.org/8070.png"}},
+    {"id":"wc2026-537411","kickoff":{"utc":"2026-06-23T20:00:00Z"},"homeTeam":{"name":"England","crestUrl":"https://crests.football-data.org/770.svg"},"awayTeam":{"name":"Ghana","crestUrl":"https://crests.football-data.org/ghana.svg"}},
+    {"id":"wc2026-537412","kickoff":{"utc":"2026-06-23T23:00:00Z"},"homeTeam":{"name":"Panama","crestUrl":"https://crests.football-data.org/panama.svg"},"awayTeam":{"name":"Croatia","crestUrl":"https://crests.football-data.org/799.svg"}},
+    {"id":"wc2026-537406","kickoff":{"utc":"2026-06-24T02:00:00Z"},"homeTeam":{"name":"Colombia","crestUrl":"https://crests.football-data.org/818.svg"},"awayTeam":{"name":"Congo DR","crestUrl":"https://crests.football-data.org/congo_dr.svg"}},
+    {"id":"wc2026-537337","kickoff":{"utc":"2026-06-24T19:00:00Z"},"homeTeam":{"name":"Switzerland","crestUrl":"https://crests.football-data.org/788.svg"},"awayTeam":{"name":"Canada","crestUrl":"https://crests.football-data.org/canada.svg"}},
+    {"id":"wc2026-537338","kickoff":{"utc":"2026-06-24T19:00:00Z"},"homeTeam":{"name":"Bosnia-Herzegovina","crestUrl":"https://crests.football-data.org/bosnia.svg"},"awayTeam":{"name":"Qatar","crestUrl":"https://crests.football-data.org/8030.svg"}},
+    {"id":"wc2026-537344","kickoff":{"utc":"2026-06-24T22:00:00Z"},"homeTeam":{"name":"Morocco","crestUrl":"https://crests.football-data.org/morocco.svg"},"awayTeam":{"name":"Haiti","crestUrl":"https://crests.football-data.org/haiti.svg"}},
+    {"id":"wc2026-537343","kickoff":{"utc":"2026-06-24T22:00:00Z"},"homeTeam":{"name":"Scotland","crestUrl":"https://crests.football-data.org/814.svg"},"awayTeam":{"name":"Brazil","crestUrl":"https://crests.football-data.org/764.svg"}},
+    {"id":"wc2026-537331","kickoff":{"utc":"2026-06-25T01:00:00Z"},"homeTeam":{"name":"Czechia","crestUrl":"https://crests.football-data.org/798.svg"},"awayTeam":{"name":"Mexico","crestUrl":"https://crests.football-data.org/769.svg"}},
+    {"id":"wc2026-537332","kickoff":{"utc":"2026-06-25T01:00:00Z"},"homeTeam":{"name":"South Africa","crestUrl":"https://crests.football-data.org/9396.svg"},"awayTeam":{"name":"South Korea","crestUrl":"https://crests.football-data.org/772.png"}},
+    {"id":"wc2026-537355","kickoff":{"utc":"2026-06-25T20:00:00Z"},"homeTeam":{"name":"Ecuador","crestUrl":"https://crests.football-data.org/791.svg"},"awayTeam":{"name":"Germany","crestUrl":"https://crests.football-data.org/759.svg"}},
+    {"id":"wc2026-537356","kickoff":{"utc":"2026-06-25T20:00:00Z"},"homeTeam":{"name":"Curaçao","crestUrl":"https://crests.football-data.org/curacao.svg"},"awayTeam":{"name":"Ivory Coast","crestUrl":"https://crests.football-data.org/787.svg"}},
+    {"id":"wc2026-537361","kickoff":{"utc":"2026-06-25T23:00:00Z"},"homeTeam":{"name":"Tunisia","crestUrl":"https://crests.football-data.org/tunisia.svg"},"awayTeam":{"name":"Netherlands","crestUrl":"https://crests.football-data.org/8601.svg"}},
+    {"id":"wc2026-537362","kickoff":{"utc":"2026-06-25T23:00:00Z"},"homeTeam":{"name":"Japan","crestUrl":"https://crests.football-data.org/766.svg"},"awayTeam":{"name":"Sweden","crestUrl":"https://crests.football-data.org/792.svg"}},
+    {"id":"wc2026-537349","kickoff":{"utc":"2026-06-26T02:00:00Z"},"homeTeam":{"name":"Turkey","crestUrl":"https://crests.football-data.org/803.svg"},"awayTeam":{"name":"United States","crestUrl":"https://crests.football-data.org/usa.svg"}},
+    {"id":"wc2026-537350","kickoff":{"utc":"2026-06-26T02:00:00Z"},"homeTeam":{"name":"Paraguay","crestUrl":"https://crests.football-data.org/761.svg"},"awayTeam":{"name":"Australia","crestUrl":"https://crests.football-data.org/779.svg"}},
+    {"id":"wc2026-537395","kickoff":{"utc":"2026-06-26T19:00:00Z"},"homeTeam":{"name":"Norway","crestUrl":"https://crests.football-data.org/813.svg"},"awayTeam":{"name":"France","crestUrl":"https://crests.football-data.org/773.svg"}},
+    {"id":"wc2026-537396","kickoff":{"utc":"2026-06-26T19:00:00Z"},"homeTeam":{"name":"Senegal","crestUrl":"https://crests.football-data.org/senegal.svg"},"awayTeam":{"name":"Iraq","crestUrl":"https://crests.football-data.org/iraq.svg"}},
+    {"id":"wc2026-537373","kickoff":{"utc":"2026-06-27T00:00:00Z"},"homeTeam":{"name":"Uruguay","crestUrl":"https://crests.football-data.org/758.svg"},"awayTeam":{"name":"Spain","crestUrl":"https://crests.football-data.org/760.svg"}},
+    {"id":"wc2026-537374","kickoff":{"utc":"2026-06-27T00:00:00Z"},"homeTeam":{"name":"Cape Verde Islands","crestUrl":"https://crests.football-data.org/cape_verde.svg"},"awayTeam":{"name":"Saudi Arabia","crestUrl":"https://crests.football-data.org/saudi_arabia.svg"}},
+    {"id":"wc2026-537367","kickoff":{"utc":"2026-06-27T03:00:00Z"},"homeTeam":{"name":"New Zealand","crestUrl":"https://crests.football-data.org/783.svg"},"awayTeam":{"name":"Belgium","crestUrl":"https://crests.football-data.org/805.svg"}},
+    {"id":"wc2026-537368","kickoff":{"utc":"2026-06-27T03:00:00Z"},"homeTeam":{"name":"Egypt","crestUrl":"https://crests.football-data.org/825.svg"},"awayTeam":{"name":"Iran","crestUrl":"https://crests.football-data.org/iran.svg"}},
+    {"id":"wc2026-537413","kickoff":{"utc":"2026-06-27T21:00:00Z"},"homeTeam":{"name":"Panama","crestUrl":"https://crests.football-data.org/panama.svg"},"awayTeam":{"name":"England","crestUrl":"https://crests.football-data.org/770.svg"}},
+    {"id":"wc2026-537414","kickoff":{"utc":"2026-06-27T21:00:00Z"},"homeTeam":{"name":"Croatia","crestUrl":"https://crests.football-data.org/799.svg"},"awayTeam":{"name":"Ghana","crestUrl":"https://crests.football-data.org/ghana.svg"}},
+    {"id":"wc2026-537407","kickoff":{"utc":"2026-06-27T23:30:00Z"},"homeTeam":{"name":"Colombia","crestUrl":"https://crests.football-data.org/818.svg"},"awayTeam":{"name":"Portugal","crestUrl":"https://crests.football-data.org/765.svg"}},
+    {"id":"wc2026-537408","kickoff":{"utc":"2026-06-27T23:30:00Z"},"homeTeam":{"name":"Congo DR","crestUrl":"https://crests.football-data.org/congo_dr.svg"},"awayTeam":{"name":"Uzbekistan","crestUrl":"https://crests.football-data.org/8070.png"}},
+    {"id":"wc2026-537401","kickoff":{"utc":"2026-06-28T02:00:00Z"},"homeTeam":{"name":"Jordan","crestUrl":"https://crests.football-data.org/8049.png"},"awayTeam":{"name":"Argentina","crestUrl":"https://crests.football-data.org/762.png"}},
+    {"id":"wc2026-537402","kickoff":{"utc":"2026-06-28T02:00:00Z"},"homeTeam":{"name":"Algeria","crestUrl":"https://crests.football-data.org/algeria.svg"},"awayTeam":{"name":"Austria","crestUrl":"https://crests.football-data.org/816.svg"}}
+  ]
+};
+
+// Helper para convertir fecha UTC a la hora local para el input type="datetime-local"
+const getLocalDatetime = (utcString) => {
+  if (!utcString) return "";
+  const d = new Date(utcString);
+  // Ajuste automático según la zona horaria del dispositivo que usa el Admin
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
+
+// Generamos la base de datos limpia
+const matchDatabase = RAW_API_DATA.matches.map(match => ({
+  id: match.id,
+  home: match.homeTeam.name || "TBD",
+  homeFlag: match.homeTeam.crestUrl || "🏳️",
+  away: match.awayTeam.name || "TBD",
+  awayFlag: match.awayTeam.crestUrl || "🏴",
+  defaultTime: getLocalDatetime(match.kickoff?.utc)
+}));
+
 export default function App() {
   const [view, setView] = useState('public');
   const [firebaseUser, setFirebaseUser] = useState(null);
@@ -28,43 +124,27 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Estados del Video Embed
   const [embedCode, setEmbedCode] = useState('');
   const [draftCode, setDraftCode] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
 
-  // Estados del Calendario
   const [matches, setMatches] = useState([]);
   const [newMatch, setNewMatch] = useState({ 
     home: '', homeFlag: '', away: '', awayFlag: '', date: '', status: 'Próximamente' 
   });
 
-  // Estado para la Base de Datos desde tu API
-  const [matchDatabase, setMatchDatabase] = useState([]);
-  const [isLoadingDB, setIsLoadingDB] = useState(false);
-
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (error) {
-        console.error("Error al conectar con Firebase:", error);
-      }
+      try { await signInAnonymously(auth); } 
+      catch (error) { console.error("Error al conectar con Firebase:", error); }
     };
     initAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-    });
-
+    const unsubscribe = onAuthStateChanged(auth, (user) => setFirebaseUser(user));
     return () => unsubscribe();
   }, []);
 
-  // Escuchar Video y Calendario desde Firebase en tiempo real
   useEffect(() => {
     if (!firebaseUser) return;
-
-    // 1. Conexión del Video
     const embedRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
     const unsubEmbed = onSnapshot(embedRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -75,11 +155,9 @@ export default function App() {
       }
     });
 
-    // 2. Conexión del Calendario
     const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
     const unsubSchedule = onSnapshot(scheduleRef, (snapshot) => {
       if (snapshot.exists() && snapshot.data().matches) {
-        // Ordenamos los partidos por fecha automáticamente
         const sortedMatches = snapshot.data().matches.sort((a, b) => new Date(a.date) - new Date(b.date));
         setMatches(sortedMatches);
       } else {
@@ -87,72 +165,27 @@ export default function App() {
       }
     });
 
-    return () => {
-      unsubEmbed();
-      unsubSchedule();
-    };
+    return () => { unsubEmbed(); unsubSchedule(); };
   }, [firebaseUser]);
-
-  // Cargar datos de la API externa cuando entra el Administrador
-  useEffect(() => {
-    if (view === 'admin' && isAdminLoggedIn) {
-      const fetchMatchDatabase = async () => {
-        setIsLoadingDB(true);
-        try {
-          const response = await fetch('https://worldcupfixtureapi.com/api/matches');
-          if (!response.ok) throw new Error('Error al conectar con la API');
-          
-          const data = await response.json();
-          
-          // Mapeamos los datos de la API para que coincidan con la estructura de la aplicación
-          // (Si tu API tiene nombres diferentes como "home_team" en vez de "home", se ajustan aquí)
-          const formattedData = data.map((item, index) => ({
-            id: item.id || `api-${index}`,
-            home: item.home || item.homeTeam || item.home_team || 'Local',
-            homeFlag: item.homeFlag || item.home_flag || '🏳️',
-            away: item.away || item.awayTeam || item.away_team || 'Visita',
-            awayFlag: item.awayFlag || item.away_flag || '🏴',
-            defaultTime: item.date || item.defaultTime || item.match_date || ''
-          }));
-          
-          setMatchDatabase(formattedData);
-        } catch (error) {
-          console.error("Error al obtener la API de partidos:", error);
-        } finally {
-          setIsLoadingDB(false);
-        }
-      };
-      
-      fetchMatchDatabase();
-    }
-  }, [view, isAdminLoggedIn]);
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (loginUsername === 'admin' && loginPassword === '1234') {
-      setIsAdminLoggedIn(true);
-      setLoginError('');
-      setLoginUsername('');
-      setLoginPassword('');
+      setIsAdminLoggedIn(true); setLoginError(''); setLoginUsername(''); setLoginPassword('');
     } else {
       setLoginError('Usuario o contraseña incorrectos');
     }
   };
 
-  // Función para destruir atributos sandbox del video
   const forceRemoveSandbox = (code) => {
     if (!code) return '';
     try {
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = code;
       const iframes = tempDiv.getElementsByTagName('iframe');
-      for (let i = 0; i < iframes.length; i++) {
-        iframes[i].removeAttribute('sandbox');
-      }
+      for (let i = 0; i < iframes.length; i++) { iframes[i].removeAttribute('sandbox'); }
       return tempDiv.innerHTML;
-    } catch (e) {
-      return code;
-    }
+    } catch (e) { return code; }
   };
 
   const handleSaveCode = async () => {
@@ -170,16 +203,12 @@ export default function App() {
     }
   };
 
-  // --- Funciones del Gestor de Partidos ---
   const handleAddMatch = async (e) => {
     e.preventDefault();
     if (!firebaseUser) return;
-    
     const updatedMatches = [...matches, { ...newMatch, id: Date.now().toString() }];
     const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
     await setDoc(scheduleRef, { matches: updatedMatches });
-    
-    // Limpiar formulario tras guardar
     setNewMatch({ home: '', homeFlag: '', away: '', awayFlag: '', date: '', status: 'Próximamente' });
   };
 
@@ -197,17 +226,20 @@ export default function App() {
     await setDoc(scheduleRef, { matches: updatedMatches });
   };
 
+  const renderFlag = (flagUrl, sizeClass = "w-12 h-12 md:w-16 md:h-16") => {
+    if (!flagUrl) return <span className="text-4xl">🏳️</span>;
+    if (flagUrl.startsWith('http')) {
+      return <img src={flagUrl} className={`${sizeClass} object-contain drop-shadow-md`} alt="flag" />;
+    }
+    return <span className="text-4xl md:text-5xl drop-shadow-sm">{flagUrl}</span>;
+  };
+
   const renderPublicView = () => (
     <div className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-950 min-h-[calc(100vh-64px)] w-full overflow-y-auto">
-      
-      {/* 1. Zona del Reproductor de Video */}
       <div className="w-full bg-black flex justify-center border-b border-gray-800 shadow-xl">
         <div className="w-full max-w-5xl aspect-video flex items-center justify-center bg-black relative">
           {embedCode ? (
-            <div
-              className="w-full h-full flex justify-center items-center overflow-hidden"
-              dangerouslySetInnerHTML={{ __html: embedCode }}
-            />
+            <div className="w-full h-full flex justify-center items-center overflow-hidden" dangerouslySetInnerHTML={{ __html: embedCode }} />
           ) : (
             <div className="text-center text-gray-500 flex flex-col items-center p-6">
               <Code size={64} className="mb-4 opacity-50" />
@@ -217,7 +249,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* 2. Zona del Calendario de Partidos */}
       <div className="max-w-5xl mx-auto w-full p-4 sm:p-6 lg:p-8 mb-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
@@ -226,7 +257,7 @@ export default function App() {
           </h2>
           <div className="self-start sm:self-auto text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 px-3 py-1.5 rounded-full flex items-center">
             <Clock size={16} className="mr-2" />
-            Hora de Guatemala
+            Hora Local
           </div>
         </div>
 
@@ -242,31 +273,31 @@ export default function App() {
               const formattedTime = matchDate.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });
 
               return (
-                <div key={match.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
-                  <div className="flex justify-between items-center mb-5">
+                <div key={match.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-center mb-6">
                     <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                       {formattedDate}
                     </span>
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${
                       match.status === 'En Vivo' 
-                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse' 
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse ring-1 ring-red-300' 
                         : match.status === 'Finalizado'
                         ? 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                        : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 ring-1 ring-blue-200'
                     }`}>
                       {match.status === 'En Vivo' ? '🔴 EN VIVO' : match.status === 'Finalizado' ? 'FINALIZADO' : formattedTime}
                     </span>
                   </div>
                   
-                  <div className="flex items-center justify-between mt-auto px-2">
-                    <div className="flex flex-col items-center flex-1">
-                      <span className="text-4xl mb-2 drop-shadow-sm">{match.homeFlag}</span>
-                      <span className="font-semibold text-gray-900 dark:text-white text-center text-sm">{match.home}</span>
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className="flex flex-col items-center flex-1 w-1/3">
+                      <div className="mb-3">{renderFlag(match.homeFlag)}</div>
+                      <span className="font-semibold text-gray-900 dark:text-white text-center text-sm w-full truncate">{match.home}</span>
                     </div>
-                    <div className="px-3 font-black text-gray-300 dark:text-gray-600 italic text-lg">VS</div>
-                    <div className="flex flex-col items-center flex-1">
-                      <span className="text-4xl mb-2 drop-shadow-sm">{match.awayFlag}</span>
-                      <span className="font-semibold text-gray-900 dark:text-white text-center text-sm">{match.away}</span>
+                    <div className="px-2 font-black text-gray-300 dark:text-gray-600 italic text-xl">VS</div>
+                    <div className="flex flex-col items-center flex-1 w-1/3">
+                      <div className="mb-3">{renderFlag(match.awayFlag)}</div>
+                      <span className="font-semibold text-gray-900 dark:text-white text-center text-sm w-full truncate">{match.away}</span>
                     </div>
                   </div>
                 </div>
@@ -286,22 +317,19 @@ export default function App() {
             <Shield className="text-blue-600 dark:text-blue-400" size={36} />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Acceso Administrador</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">Gestiona el contenido del sitio web</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Usuario</label>
-            <input type="text" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none" placeholder="Ej: admin" required />
+            <input type="text" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none" required />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contraseña</label>
-            <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none" placeholder="••••" required />
+            <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none" required />
           </div>
-          {loginError && (
-            <div className="flex items-center text-red-500 bg-red-50 p-3 rounded-lg text-sm border border-red-100"><AlertCircle size={18} className="mr-2" />{loginError}</div>
-          )}
-          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-xl mt-2">Ingresar al Panel</button>
+          {loginError && <div className="flex items-center text-red-500 bg-red-50 p-3 rounded-lg text-sm border border-red-100"><AlertCircle size={18} className="mr-2" />{loginError}</div>}
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-xl mt-2">Ingresar</button>
         </form>
       </div>
     </div>
@@ -311,7 +339,6 @@ export default function App() {
     <div className="flex-1 p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-64px)]">
       <div className="max-w-5xl mx-auto space-y-8">
         
-        {/* Cabecera Admin */}
         <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
             <Shield className="mr-2 text-blue-500" size={24}/> Panel de Control Global
@@ -321,7 +348,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* MÓDULO 1: GESTOR DE VIDEO */}
+        {/* Módulo Video */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 lg:p-6">
           <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center">
             <Code className="mr-2 text-blue-500" size={20}/> 1. Gestor de Transmisión en Vivo
@@ -337,9 +364,6 @@ export default function App() {
               <button onClick={handleSaveCode} disabled={saveStatus === 'saving'} className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center">
                 <Save size={18} className="mr-2" /> Actualizar Video
               </button>
-              <div className="mt-2 text-center h-6">
-                {saveStatus === 'success' && <span className="text-green-600 text-sm font-medium">✅ Guardado correctamente</span>}
-              </div>
             </div>
             <div className="bg-black rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden aspect-video">
                {embedCode ? <div dangerouslySetInnerHTML={{ __html: embedCode }} className="w-full h-full flex justify-center items-center" /> : <span className="text-gray-500 text-sm">Vista previa vacía</span>}
@@ -347,62 +371,47 @@ export default function App() {
           </div>
         </div>
 
-        {/* MÓDULO 2: GESTOR DE CALENDARIO */}
+        {/* Módulo Calendario */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 lg:p-6">
           <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center">
             <Calendar className="mr-2 text-blue-500" size={20}/> 2. Gestor de Partidos
           </h3>
           
-          {/* Formulario Agregar Partido */}
           <form onSubmit={handleAddMatch} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Añadir Nuevo Partido</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Añadir Partido desde Base de Datos</p>
 
-            {/* Buscador de Base de Datos Interna */}
             <div className="mb-4 flex items-center bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2">
               <Search size={18} className="text-gray-400 mr-2" />
               <select
                 className="w-full bg-transparent outline-none text-gray-700 dark:text-white"
-                disabled={isLoadingDB}
                 onChange={(e) => {
                   const matchId = e.target.value;
                   if (!matchId) return;
                   const template = matchDatabase.find(m => m.id === matchId);
                   if (template) {
-                    setNewMatch({
-                      ...newMatch,
-                      home: template.home,
-                      homeFlag: template.homeFlag,
-                      away: template.away,
-                      awayFlag: template.awayFlag,
-                      date: template.defaultTime
-                    });
+                    setNewMatch({ ...newMatch, home: template.home, homeFlag: template.homeFlag, away: template.away, awayFlag: template.awayFlag, date: template.defaultTime });
                   }
                 }}
               >
-                <option value="">
-                  {isLoadingDB ? "Descargando partidos desde tu API..." : "Buscar en la base de datos de la API..."}
-                </option>
-                {matchDatabase.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.homeFlag} {m.home} vs {m.awayFlag} {m.away}
-                  </option>
-                ))}
+                <option value="">Buscar en la base de datos oficial del Mundial 2026...</option>
+                {matchDatabase.map(m => {
+                  const localD = m.defaultTime ? new Date(m.defaultTime).toLocaleDateString([], {month:'short', day:'numeric'}) : '';
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.home} vs {m.away} ({localD})
+                    </option>
+                  )
+                })}
               </select>
-            </div>
-
-            <div className="flex items-center my-4">
-              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
-              <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">O ajusta los detalles manualmente</span>
-              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               <div className="md:col-span-3 flex gap-2">
-                <input type="text" placeholder="Bandera (🇺🇸)" value={newMatch.homeFlag} onChange={e=>setNewMatch({...newMatch, homeFlag: e.target.value})} className="w-16 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-center" required/>
+                <input type="text" placeholder="URL Bandera/Emoji" value={newMatch.homeFlag} onChange={e=>setNewMatch({...newMatch, homeFlag: e.target.value})} className="w-16 px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-center" title="Puede ser Emoji o enlace de imagen" required/>
                 <input type="text" placeholder="Local" value={newMatch.home} onChange={e=>setNewMatch({...newMatch, home: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" required/>
               </div>
               <div className="md:col-span-3 flex gap-2">
-                <input type="text" placeholder="Bandera (🇲🇽)" value={newMatch.awayFlag} onChange={e=>setNewMatch({...newMatch, awayFlag: e.target.value})} className="w-16 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-center" required/>
+                <input type="text" placeholder="URL Bandera/Emoji" value={newMatch.awayFlag} onChange={e=>setNewMatch({...newMatch, awayFlag: e.target.value})} className="w-16 px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-center" title="Puede ser Emoji o enlace de imagen" required/>
                 <input type="text" placeholder="Visita" value={newMatch.away} onChange={e=>setNewMatch({...newMatch, away: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" required/>
               </div>
               <div className="md:col-span-4">
@@ -416,7 +425,6 @@ export default function App() {
             </div>
           </form>
 
-          {/* Lista de Partidos Administrables */}
           <div className="space-y-3">
             {matches.map(match => {
               const matchDate = new Date(match.date);
@@ -426,9 +434,13 @@ export default function App() {
                 <div key={match.id} className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm gap-4">
                   <div className="flex items-center gap-4 flex-1">
                     <span className="text-sm font-mono text-gray-500 w-24">{formattedDate}</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">
-                      {match.homeFlag} {match.home} <span className="text-gray-400 font-normal mx-2">vs</span> {match.awayFlag} {match.away}
-                    </span>
+                    <div className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                      <div className="w-6 h-6 flex items-center justify-center">{renderFlag(match.homeFlag, "w-6 h-6")}</div>
+                      <span>{match.home}</span> 
+                      <span className="text-gray-400 font-normal mx-1">vs</span> 
+                      <div className="w-6 h-6 flex items-center justify-center">{renderFlag(match.awayFlag, "w-6 h-6")}</div>
+                      <span>{match.away}</span>
+                    </div>
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -458,7 +470,6 @@ export default function App() {
             {matches.length === 0 && <p className="text-center text-gray-500 text-sm py-4">No hay partidos agregados.</p>}
           </div>
         </div>
-
       </div>
     </div>
   );
