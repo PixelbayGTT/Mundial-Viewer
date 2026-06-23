@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Eye, Save, LogOut, CheckCircle, AlertCircle, Code } from 'lucide-react';
+import { Shield, Eye, Save, LogOut, CheckCircle, AlertCircle, Code, Calendar, Clock, Trash2, Plus, Radio } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -28,14 +28,16 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
+  // Estados del Video Embed
   const [embedCode, setEmbedCode] = useState('');
   const [draftCode, setDraftCode] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
 
-  const [botUrl, setBotUrl] = useState('');
-  const [botStreamId, setBotStreamId] = useState(''); 
-  const [botStatus, setBotStatus] = useState('idle');
-  const [botMessage, setBotMessage] = useState('');
+  // Estados del Calendario
+  const [matches, setMatches] = useState([]);
+  const [newMatch, setNewMatch] = useState({ 
+    home: '', homeFlag: '', away: '', awayFlag: '', date: '', status: 'Próximamente' 
+  });
 
   useEffect(() => {
     const initAuth = async () => {
@@ -45,7 +47,6 @@ export default function App() {
         console.error("Error al conectar con Firebase:", error);
       }
     };
-
     initAuth();
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -55,26 +56,37 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Escuchar Video y Calendario desde Firebase en tiempo real
   useEffect(() => {
     if (!firebaseUser) return;
 
-    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
-
-    const unsubscribe = onSnapshot(docRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          const cleanCode = forceRemoveSandbox(data.code || '');
-          setEmbedCode(cleanCode);
-          setDraftCode(cleanCode);
-        }
-      },
-      (error) => {
-        console.error("Error al obtener el código embed:", error);
+    // 1. Conexión del Video
+    const embedRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
+    const unsubEmbed = onSnapshot(embedRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const cleanCode = forceRemoveSandbox(data.code || '');
+        setEmbedCode(cleanCode);
+        setDraftCode(cleanCode);
       }
-    );
+    });
 
-    return () => unsubscribe();
+    // 2. Conexión del Calendario
+    const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
+    const unsubSchedule = onSnapshot(scheduleRef, (snapshot) => {
+      if (snapshot.exists() && snapshot.data().matches) {
+        // Ordenamos los partidos por fecha automáticamente
+        const sortedMatches = snapshot.data().matches.sort((a, b) => new Date(a.date) - new Date(b.date));
+        setMatches(sortedMatches);
+      } else {
+        setMatches([]);
+      }
+    });
+
+    return () => {
+      unsubEmbed();
+      unsubSchedule();
+    };
   }, [firebaseUser]);
 
   const handleLogin = (e) => {
@@ -89,6 +101,7 @@ export default function App() {
     }
   };
 
+  // Función para destruir atributos sandbox del video
   const forceRemoveSandbox = (code) => {
     if (!code) return '';
     try {
@@ -105,13 +118,12 @@ export default function App() {
   };
 
   const handleSaveCode = async () => {
+    if (!firebaseUser) return;
     setSaveStatus('saving');
     try {
       const cleanDraft = forceRemoveSandbox(draftCode);
-      
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
       await setDoc(docRef, { code: cleanDraft, updatedAt: new Date().toISOString() });
-      
       setSaveStatus('success');
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
@@ -120,84 +132,108 @@ export default function App() {
     }
   };
 
-  const handleRunBot = async () => {
-    if (!botUrl) {
-      setBotMessage("Por favor, ingresa una URL válida.");
-      setBotStatus('error');
-      return;
-    }
+  // --- Funciones del Gestor de Partidos ---
+  const handleAddMatch = async (e) => {
+    e.preventDefault();
+    if (!firebaseUser) return;
+    
+    const updatedMatches = [...matches, { ...newMatch, id: Date.now().toString() }];
+    const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
+    await setDoc(scheduleRef, { matches: updatedMatches });
+    
+    // Limpiar formulario tras guardar
+    setNewMatch({ home: '', homeFlag: '', away: '', awayFlag: '', date: '', status: 'Próximamente' });
+  };
 
-    setBotStatus('loading');
-    setBotMessage('Analizando la página destino...');
+  const handleDeleteMatch = async (id) => {
+    if (!firebaseUser) return;
+    const updatedMatches = matches.filter(m => m.id !== id);
+    const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
+    await setDoc(scheduleRef, { matches: updatedMatches });
+  };
 
-    try {
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(botUrl)}`;
-      const response = await fetch(proxyUrl);
-
-      if (!response.ok) throw new Error('Error en la red');
-
-      const data = await response.json();
-      const html = data.contents;
-
-      if (!html) throw new Error('Página vacía');
-
-      const iframes = html.match(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi);
-
-      if (iframes && iframes.length > 0) {
-        let videoIframes = iframes.filter(iframe => 
-          iframe.toLowerCase().includes('embed') || iframe.toLowerCase().includes('allowfullscreen')
-        );
-
-        if (videoIframes.length > 0) {
-          if (botStreamId) {
-            videoIframes = videoIframes.map(iframe => {
-              return iframe.replace(/(src=["'][^"']+\/)(\d+)(["'])/i, `$1${botStreamId}$3`)
-                           .replace(/(stream=)(\d+)/i, `$1${botStreamId}`);
-            });
-            videoIframes = [...new Set(videoIframes)]; 
-          }
-
-          const allFoundCode = videoIframes.join('\n\n<!-- ⬆️ OPCIÓN 1 | ⬇️ OPCIÓN 2 -->\n\n');
-          setDraftCode(allFoundCode);
-          
-          if (videoIframes.length === 1) {
-            const cleanDraft = forceRemoveSandbox(allFoundCode);
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
-            await setDoc(docRef, { code: cleanDraft, updatedAt: new Date().toISOString() });
-            
-            setBotStatus('success');
-            setBotMessage(`¡Partido encontrado${botStreamId ? ` (Cambiado a Stream ${botStreamId})` : ''} y publicado!`);
-          } else {
-            setBotStatus('success');
-            setBotMessage(`¡Encontré reproductores! Revisa abajo y dale a "Aplicar Cambios".`);
-          }
-        } else {
-          setBotStatus('error');
-          setBotMessage('Se encontraron iframes, pero ninguno parece ser de video.');
-        }
-      } else {
-        setBotStatus('error');
-        setBotMessage('No se encontró ningún reproductor de video en esa URL.');
-      }
-    } catch (error) {
-      console.error("Error del bot:", error);
-      setBotStatus('error');
-      setBotMessage('Error de conexión. La página fuente bloqueó el análisis.');
-    }
+  const handleUpdateMatchStatus = async (id, newStatus) => {
+    if (!firebaseUser) return;
+    const updatedMatches = matches.map(m => m.id === id ? { ...m, status: newStatus } : m);
+    const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
+    await setDoc(scheduleRef, { matches: updatedMatches });
   };
 
   const renderPublicView = () => (
-    <div className="flex-1 flex flex-col items-center justify-center bg-black min-h-[calc(100vh-64px)] w-full overflow-hidden">
-      <div className="w-full h-[calc(100vh-64px)] flex items-center justify-center">
-        {embedCode ? (
-          <div
-            className="w-full h-full flex justify-center items-center overflow-hidden bg-black"
-            dangerouslySetInnerHTML={{ __html: embedCode }}
-          />
+    <div className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-950 min-h-[calc(100vh-64px)] w-full overflow-y-auto">
+      
+      {/* 1. Zona del Reproductor de Video */}
+      <div className="w-full bg-black flex justify-center border-b border-gray-800 shadow-xl">
+        <div className="w-full max-w-5xl aspect-video flex items-center justify-center bg-black relative">
+          {embedCode ? (
+            <div
+              className="w-full h-full flex justify-center items-center overflow-hidden"
+              dangerouslySetInnerHTML={{ __html: embedCode }}
+            />
+          ) : (
+            <div className="text-center text-gray-500 flex flex-col items-center p-6">
+              <Code size={64} className="mb-4 opacity-50" />
+              <p className="text-xl font-medium">Esperando transmisión...</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 2. Zona del Calendario de Partidos */}
+      <div className="max-w-5xl mx-auto w-full p-4 sm:p-6 lg:p-8 mb-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+            <Calendar className="mr-3 text-blue-600 dark:text-blue-400" size={28} />
+            Calendario de Partidos
+          </h2>
+          <div className="self-start sm:self-auto text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 px-3 py-1.5 rounded-full flex items-center">
+            <Clock size={16} className="mr-2" />
+            Hora de Guatemala
+          </div>
+        </div>
+
+        {matches.length === 0 ? (
+          <div className="text-center p-10 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 text-gray-500">
+            Aún no hay partidos programados.
+          </div>
         ) : (
-          <div className="text-center text-gray-500 flex flex-col items-center p-6">
-            <Code size={64} className="mb-4 opacity-50" />
-            <p className="text-xl font-medium">Esperando transmisión...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {matches.map((match) => {
+              const matchDate = new Date(match.date);
+              const formattedDate = matchDate.toLocaleDateString('es-GT', { weekday: 'short', month: 'short', day: 'numeric' }).replace('.', '');
+              const formattedTime = matchDate.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+              return (
+                <div key={match.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
+                  <div className="flex justify-between items-center mb-5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      {formattedDate}
+                    </span>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                      match.status === 'En Vivo' 
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-pulse' 
+                        : match.status === 'Finalizado'
+                        ? 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                        : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    }`}>
+                      {match.status === 'En Vivo' ? '🔴 EN VIVO' : match.status === 'Finalizado' ? 'FINALIZADO' : formattedTime}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-auto px-2">
+                    <div className="flex flex-col items-center flex-1">
+                      <span className="text-4xl mb-2 drop-shadow-sm">{match.homeFlag}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white text-center text-sm">{match.home}</span>
+                    </div>
+                    <div className="px-3 font-black text-gray-300 dark:text-gray-600 italic text-lg">VS</div>
+                    <div className="flex flex-col items-center flex-1">
+                      <span className="text-4xl mb-2 drop-shadow-sm">{match.awayFlag}</span>
+                      <span className="font-semibold text-gray-900 dark:text-white text-center text-sm">{match.away}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -218,40 +254,16 @@ export default function App() {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Usuario</label>
-            <input
-              type="text"
-              value={loginUsername}
-              onChange={(e) => setLoginUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              placeholder="Ej: admin"
-              required
-            />
+            <input type="text" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none" placeholder="Ej: admin" required />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contraseña</label>
-            <input
-              type="password"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              placeholder="••••"
-              required
-            />
+            <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white outline-none" placeholder="••••" required />
           </div>
-
           {loginError && (
-            <div className="flex items-center text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-sm border border-red-100 dark:border-red-800">
-              <AlertCircle size={18} className="mr-2 flex-shrink-0" />
-              {loginError}
-            </div>
+            <div className="flex items-center text-red-500 bg-red-50 p-3 rounded-lg text-sm border border-red-100"><AlertCircle size={18} className="mr-2" />{loginError}</div>
           )}
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-xl transition-colors focus:ring-4 focus:ring-blue-500/50 outline-none shadow-md mt-2"
-          >
-            Ingresar al Panel
-          </button>
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-xl mt-2">Ingresar al Panel</button>
         </form>
       </div>
     </div>
@@ -259,143 +271,116 @@ export default function App() {
 
   const renderAdminPanel = () => (
     <div className="flex-1 p-4 md:p-8 bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-64px)]">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
-              <Code className="mr-2 text-blue-500" size={20}/>
-              Gestor de Código Embed
-            </h2>
-          </div>
-          <button
-            onClick={() => setIsAdminLoggedIn(false)}
-            className="flex items-center justify-center text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 transition-colors px-4 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 bg-gray-100 dark:bg-gray-700 font-medium text-sm"
-          >
-            <LogOut size={16} className="mr-2" />
-            Cerrar Sesión
+      <div className="max-w-5xl mx-auto space-y-8">
+        
+        {/* Cabecera Admin */}
+        <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+            <Shield className="mr-2 text-blue-500" size={24}/> Panel de Control Global
+          </h2>
+          <button onClick={() => setIsAdminLoggedIn(false)} className="flex items-center text-red-500 hover:bg-red-50 px-4 py-2 rounded-xl font-medium text-sm">
+            <LogOut size={16} className="mr-2" /> Salir
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="flex flex-col gap-6 h-[500px]">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-sm border border-blue-500 p-5 shrink-0">
-              <div className="mb-3">
-                <h3 className="text-lg font-bold text-white flex items-center">
-                  🤖 Bot Auto-Extractor
-                </h3>
-                <p className="text-xs text-blue-100 mt-1">
-                  Pega el link de la página externa. Si sabes el número de canal (ej. 11 para Telemundo), ponlo abajo y el bot lo elegirá por ti.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <input
-                  type="url"
-                  value={botUrl}
-                  onChange={(e) => setBotUrl(e.target.value)}
-                  placeholder="Link de la página web externa..."
-                  className="w-full px-4 py-2.5 rounded-xl border border-white/20 bg-black/20 text-white placeholder-blue-200 focus:ring-2 focus:ring-white outline-none text-sm transition-all"
-                />
-                
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="number"
-                    value={botStreamId}
-                    onChange={(e) => setBotStreamId(e.target.value)}
-                    placeholder="Nº Stream (Ej: 11)"
-                    className="w-full sm:w-1/3 px-4 py-2.5 rounded-xl border border-white/20 bg-black/20 text-white placeholder-blue-200 focus:ring-2 focus:ring-white outline-none text-sm transition-all font-mono"
-                    title="Pon el número del stream que quieres (ej. 11 para Telemundo)"
-                  />
-                  
-                  <button
-                    onClick={handleRunBot}
-                    disabled={botStatus === 'loading'}
-                    className="flex-1 px-5 py-2.5 bg-white text-blue-700 hover:bg-gray-100 disabled:opacity-70 font-bold rounded-xl transition-colors shadow-md text-sm flex items-center justify-center"
-                  >
-                    {botStatus === 'loading' ? (
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    ) : null}
-                    Extraer Código
-                  </button>
-                </div>
-              </div>
-
-              {botMessage && (
-                <div className={`mt-3 px-3 py-2 rounded-lg text-sm font-medium ${
-                  botStatus === 'success' ? 'bg-green-400/20 text-green-50 border border-green-400/30' :
-                  botStatus === 'error' ? 'bg-red-400/20 text-red-50 border border-red-400/30' :
-                  'bg-white/10 text-white border border-white/20'
-                }`}>
-                  {botMessage}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex flex-col flex-1 overflow-hidden">
-              <div className="mb-4">
-                <label className="block text-base font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                  Editor Manual de Iframe
-                </label>
-              </div>
-
+        {/* MÓDULO 1: GESTOR DE VIDEO */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 lg:p-6">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center">
+            <Code className="mr-2 text-blue-500" size={20}/> 1. Gestor de Transmisión en Vivo
+          </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="flex flex-col">
               <textarea
                 value={draftCode}
                 onChange={(e) => setDraftCode(e.target.value)}
-                className="flex-1 w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
-                placeholder='Ejemplo:&#10;<iframe width="560" height="315" src="..." frameborder="0" allowfullscreen></iframe>'
+                className="w-full h-40 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-mono text-sm outline-none resize-none"
+                placeholder='Pega aquí tu <iframe>'
               />
-
-              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex-1 w-full">
-                  {saveStatus === 'success' && (
-                    <span className="flex items-center text-green-600 dark:text-green-400 text-sm font-medium bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg">
-                      <CheckCircle size={16} className="mr-1.5" />
-                      Actualizado en vivo
-                    </span>
-                  )}
-                  {saveStatus === 'error' && (
-                    <span className="flex items-center text-red-600 text-sm font-medium bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg">
-                      <AlertCircle size={16} className="mr-1.5" />
-                      Error al guardar
-                    </span>
-                  )}
-                  {saveStatus === 'saving' && (
-                    <span className="flex items-center text-blue-600 text-sm font-medium px-3 py-1.5">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Guardando...
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  onClick={handleSaveCode}
-                  disabled={saveStatus === 'saving'}
-                  className="w-full sm:w-auto flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors focus:ring-4 focus:ring-blue-500/50 outline-none shadow-md"
-                >
-                  <Save size={18} className="mr-2" />
-                  Guardar
-                </button>
+              <button onClick={handleSaveCode} disabled={saveStatus === 'saving'} className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center">
+                <Save size={18} className="mr-2" /> Actualizar Video
+              </button>
+              <div className="mt-2 text-center h-6">
+                {saveStatus === 'success' && <span className="text-green-600 text-sm font-medium">✅ Guardado correctamente</span>}
               </div>
             </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex flex-col h-[500px]">
-             <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-              <Eye size={18} className="mr-2 text-gray-500"/>
-              Vista Previa Actual
-            </h3>
-            <div className="flex-1 bg-black rounded-xl border border-gray-200 dark:border-gray-700 p-0 flex items-center justify-center overflow-hidden relative">
-               {embedCode ? (
-                  <div dangerouslySetInnerHTML={{ __html: embedCode }} className="w-full h-full flex justify-center items-center" />
-                ) : (
-                  <div className="text-gray-400 dark:text-gray-600 text-sm flex flex-col items-center">
-                    <Eye size={32} className="mb-2 opacity-50" />
-                    El área está vacía
-                  </div>
-                )}
+            <div className="bg-black rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center overflow-hidden aspect-video">
+               {embedCode ? <div dangerouslySetInnerHTML={{ __html: embedCode }} className="w-full h-full flex justify-center items-center" /> : <span className="text-gray-500 text-sm">Vista previa vacía</span>}
             </div>
           </div>
         </div>
+
+        {/* MÓDULO 2: GESTOR DE CALENDARIO */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 lg:p-6">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center">
+            <Calendar className="mr-2 text-blue-500" size={20}/> 2. Gestor de Partidos
+          </h3>
+          
+          {/* Formulario Agregar Partido */}
+          <form onSubmit={handleAddMatch} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Añadir Nuevo Partido</p>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+              <div className="md:col-span-3 flex gap-2">
+                <input type="text" placeholder="Bandera (🇺🇸)" value={newMatch.homeFlag} onChange={e=>setNewMatch({...newMatch, homeFlag: e.target.value})} className="w-16 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-center" required/>
+                <input type="text" placeholder="Local" value={newMatch.home} onChange={e=>setNewMatch({...newMatch, home: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" required/>
+              </div>
+              <div className="md:col-span-3 flex gap-2">
+                <input type="text" placeholder="Bandera (🇲🇽)" value={newMatch.awayFlag} onChange={e=>setNewMatch({...newMatch, awayFlag: e.target.value})} className="w-16 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-center" required/>
+                <input type="text" placeholder="Visita" value={newMatch.away} onChange={e=>setNewMatch({...newMatch, away: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" required/>
+              </div>
+              <div className="md:col-span-4">
+                <input type="datetime-local" value={newMatch.date} onChange={e=>setNewMatch({...newMatch, date: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-white" required/>
+              </div>
+              <div className="md:col-span-2">
+                <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center transition-colors">
+                  <Plus size={18} className="mr-1" /> Añadir
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* Lista de Partidos Administrables */}
+          <div className="space-y-3">
+            {matches.map(match => {
+              const matchDate = new Date(match.date);
+              const formattedDate = `${matchDate.getDate()}/${matchDate.getMonth()+1} - ${matchDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+              
+              return (
+                <div key={match.id} className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm gap-4">
+                  <div className="flex items-center gap-4 flex-1">
+                    <span className="text-sm font-mono text-gray-500 w-24">{formattedDate}</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">
+                      {match.homeFlag} {match.home} <span className="text-gray-400 font-normal mx-2">vs</span> {match.awayFlag} {match.away}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleUpdateMatchStatus(match.id, 'En Vivo')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center border transition-colors ${match.status === 'En Vivo' ? 'bg-red-100 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-red-50'}`}
+                    >
+                      <Radio size={14} className="mr-1" /> {match.status === 'En Vivo' ? 'Transmitiendo' : 'Poner en Vivo'}
+                    </button>
+                    <button 
+                      onClick={() => handleUpdateMatchStatus(match.id, 'Finalizado')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${match.status === 'Finalizado' ? 'bg-gray-200 border-gray-300 text-gray-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                      Finalizar
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteMatch(match.id)}
+                      className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition-colors ml-2"
+                      title="Borrar partido"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {matches.length === 0 && <p className="text-center text-gray-500 text-sm py-4">No hay partidos agregados.</p>}
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -409,32 +394,15 @@ export default function App() {
               <div className="bg-blue-600 text-white p-1.5 rounded-lg mr-3 shadow-sm">
                 <Code size={20} />
               </div>
-              <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">LivePlayer</span>
+              <span className="font-bold text-lg tracking-tight text-gray-900 dark:text-white">MundialGT Live</span>
             </div>
 
             <div className="flex space-x-1 sm:space-x-2 items-center">
-              <button
-                onClick={() => setView('public')}
-                className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold flex items-center transition-all ${
-                  view === 'public'
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm border border-blue-100 dark:border-blue-800'
-                    : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 border border-transparent'
-                }`}
-              >
-                <Eye size={16} className="sm:mr-2" />
-                <span className="hidden sm:inline">Modo Público</span>
+              <button onClick={() => setView('public')} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold flex items-center ${view === 'public' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                <Eye size={16} className="sm:mr-2" /> <span className="hidden sm:inline">Público</span>
               </button>
-
-              <button
-                onClick={() => setView('admin')}
-                className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold flex items-center transition-all ${
-                  view === 'admin'
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 shadow-sm border border-blue-100 dark:border-blue-800'
-                    : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 border border-transparent'
-                }`}
-              >
-                <Shield size={16} className="sm:mr-2" />
-                <span className="hidden sm:inline">Administración</span>
+              <button onClick={() => setView('admin')} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold flex items-center ${view === 'admin' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                <Shield size={16} className="sm:mr-2" /> <span className="hidden sm:inline">Admin</span>
               </button>
             </div>
           </div>
