@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Eye, Save, LogOut, CheckCircle, AlertCircle, Code, Calendar, Clock, Trash2, Plus, Radio, Search } from 'lucide-react';
+import { Shield, Eye, Save, LogOut, CheckCircle, AlertCircle, Code, Calendar, Clock, Trash2, Plus, Radio, Search, Lock } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // ⚠️ IMPORTANTE: REEMPLAZA ESTO CON LOS DATOS DE TU FIREBASE ⚠️
@@ -105,7 +105,7 @@ const getLocalDatetime = (utcString) => {
   return d.toISOString().slice(0, 16);
 };
 
-// Generamos la base de datos limpia
+// Generamos la base de datos limpia para el selector
 const matchDatabase = RAW_API_DATA.matches.map(match => ({
   id: match.id,
   home: match.homeTeam.name || "TBD",
@@ -119,6 +119,12 @@ export default function App() {
   const [view, setView] = useState('public');
   const [firebaseUser, setFirebaseUser] = useState(null);
 
+  // Login de Usuarios Públicos
+  const [publicEmail, setPublicEmail] = useState('');
+  const [publicPassword, setPublicPassword] = useState('');
+  const [publicLoginError, setPublicLoginError] = useState('');
+
+  // Login de Administrador
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -134,17 +140,15 @@ export default function App() {
   });
 
   useEffect(() => {
-    const initAuth = async () => {
-      try { await signInAnonymously(auth); } 
-      catch (error) { console.error("Error al conectar con Firebase:", error); }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => setFirebaseUser(user));
+    // Escucha automáticamente si el usuario ya inició sesión
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+    });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!firebaseUser) return;
+    // Si no hay usuario logueado, pero es el admin desde el panel duro, o es un user de firebase
     const embedRef = doc(db, 'artifacts', appId, 'public', 'data', 'embedConfig', 'main');
     const unsubEmbed = onSnapshot(embedRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -165,13 +169,32 @@ export default function App() {
       }
     });
 
-    return () => { unsubEmbed(); unsubSchedule(); };
-  }, [firebaseUser]);
+    return () => {
+      unsubEmbed();
+      unsubSchedule();
+    };
+  }, []); // Quitamos la dependencia estricta de firebaseUser para que escuche de todos modos si Firebase rules lo permiten
+
+  const handlePublicLogin = async (e) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, publicEmail, publicPassword);
+      setPublicLoginError('');
+      setPublicEmail('');
+      setPublicPassword('');
+    } catch (error) {
+      console.error(error);
+      setPublicLoginError('El usuario o la contraseña son incorrectos.');
+    }
+  };
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (loginUsername === 'admin' && loginPassword === '1234') {
-      setIsAdminLoggedIn(true); setLoginError(''); setLoginUsername(''); setLoginPassword('');
+      setIsAdminLoggedIn(true);
+      setLoginError('');
+      setLoginUsername('');
+      setLoginPassword('');
     } else {
       setLoginError('Usuario o contraseña incorrectos');
     }
@@ -183,13 +206,16 @@ export default function App() {
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = code;
       const iframes = tempDiv.getElementsByTagName('iframe');
-      for (let i = 0; i < iframes.length; i++) { iframes[i].removeAttribute('sandbox'); }
+      for (let i = 0; i < iframes.length; i++) {
+        iframes[i].removeAttribute('sandbox');
+      }
       return tempDiv.innerHTML;
-    } catch (e) { return code; }
+    } catch (e) {
+      return code;
+    }
   };
 
   const handleSaveCode = async () => {
-    if (!firebaseUser) return;
     setSaveStatus('saving');
     try {
       const cleanDraft = forceRemoveSandbox(draftCode);
@@ -205,7 +231,6 @@ export default function App() {
 
   const handleAddMatch = async (e) => {
     e.preventDefault();
-    if (!firebaseUser) return;
     const updatedMatches = [...matches, { ...newMatch, id: Date.now().toString() }];
     const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
     await setDoc(scheduleRef, { matches: updatedMatches });
@@ -213,19 +238,18 @@ export default function App() {
   };
 
   const handleDeleteMatch = async (id) => {
-    if (!firebaseUser) return;
     const updatedMatches = matches.filter(m => m.id !== id);
     const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
     await setDoc(scheduleRef, { matches: updatedMatches });
   };
 
   const handleUpdateMatchStatus = async (id, newStatus) => {
-    if (!firebaseUser) return;
     const updatedMatches = matches.map(m => m.id === id ? { ...m, status: newStatus } : m);
     const scheduleRef = doc(db, 'artifacts', appId, 'public', 'data', 'schedule', 'main');
     await setDoc(scheduleRef, { matches: updatedMatches });
   };
 
+  // Helper para mostrar Banderas o Emojis
   const renderFlag = (flagUrl, sizeClass = "w-12 h-12 md:w-16 md:h-16") => {
     if (!flagUrl) return <span className="text-4xl">🏳️</span>;
     if (flagUrl.startsWith('http')) {
@@ -233,6 +257,33 @@ export default function App() {
     }
     return <span className="text-4xl md:text-5xl drop-shadow-sm">{flagUrl}</span>;
   };
+
+  const renderPublicLogin = () => (
+    <div className="flex-1 flex items-center justify-center bg-gray-100 dark:bg-gray-950 p-4 min-h-[calc(100vh-64px)]">
+      <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-800">
+        <div className="text-center mb-8">
+          <div className="inline-flex bg-blue-100 dark:bg-blue-900/30 p-4 rounded-full mb-4">
+            <Lock className="text-blue-600 dark:text-blue-400" size={36} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Acceso Privado</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">Ingresa tus datos para ver las transmisiones.</p>
+        </div>
+
+        <form onSubmit={handlePublicLogin} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Correo Electrónico</label>
+            <input type="email" value={publicEmail} onChange={(e) => setPublicEmail(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Contraseña</label>
+            <input type="password" value={publicPassword} onChange={(e) => setPublicPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white outline-none" required />
+          </div>
+          {publicLoginError && <div className="flex items-center text-red-500 bg-red-50 p-3 rounded-lg text-sm border border-red-100"><AlertCircle size={18} className="mr-2" />{publicLoginError}</div>}
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-4 rounded-xl mt-2">Iniciar Sesión</button>
+        </form>
+      </div>
+    </div>
+  );
 
   const renderPublicView = () => (
     <div className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-950 min-h-[calc(100vh-64px)] w-full overflow-y-auto">
@@ -249,11 +300,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* NUEVO: Banner de Advertencia de Publicidad */}
       <div className="w-full bg-blue-900 text-blue-100 text-xs sm:text-sm py-2.5 px-4 flex items-center justify-center border-b border-blue-950 shadow-inner">
         <AlertCircle size={18} className="mr-2.5 text-blue-300 flex-shrink-0" />
         <span className="text-center">
-          <strong className="text-white">💡 Tip:</strong> La transmisión es de un proveedor externo y puede abrir ventanas con publicidad. Te recomendamos usar navegadores como <strong>Brave</strong> o instalar <strong>uBlock Origin</strong>.
+          <strong className="text-white">💡 Tip:</strong> La transmisión puede tener ventanas de publicidad externas al hacer clic. Te recomendamos usar el navegador <strong>Brave</strong> o <strong>uBlock Origin</strong>.
         </span>
       </div>
 
@@ -356,7 +406,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Módulo Video */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 lg:p-6">
           <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center">
             <Code className="mr-2 text-blue-500" size={20}/> 1. Gestor de Transmisión en Vivo
@@ -379,7 +428,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Módulo Calendario */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 lg:p-6">
           <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center">
             <Calendar className="mr-2 text-blue-500" size={20}/> 2. Gestor de Partidos
@@ -495,7 +543,6 @@ export default function App() {
             </div>
 
             <div className="flex space-x-1 sm:space-x-2 items-center">
-              {/* Botón de Cerrar Sesión para Usuarios Públicos */}
               {view === 'public' && firebaseUser && (
                 <button onClick={() => signOut(auth)} className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors mr-2">
                   Salir
@@ -514,7 +561,6 @@ export default function App() {
       </nav>
 
       <main className="flex-1 flex flex-col">
-        {/* Lógica maestra de qué mostrar */}
         {view === 'public' && !firebaseUser && renderPublicLogin()}
         {view === 'public' && firebaseUser && renderPublicView()}
         {view === 'admin' && !isAdminLoggedIn && renderLogin()}
