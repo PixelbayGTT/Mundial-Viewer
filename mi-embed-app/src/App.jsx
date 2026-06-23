@@ -249,6 +249,14 @@ export default function App() {
         </div>
       </div>
 
+      {/* NUEVO: Banner de Advertencia de Publicidad */}
+      <div className="w-full bg-blue-900 text-blue-100 text-xs sm:text-sm py-2.5 px-4 flex items-center justify-center border-b border-blue-950 shadow-inner">
+        <AlertCircle size={18} className="mr-2.5 text-blue-300 flex-shrink-0" />
+        <span className="text-center">
+          <strong className="text-white">💡 Tip:</strong> La transmisión es de un proveedor externo y puede abrir ventanas con publicidad. Te recomendamos usar navegadores como <strong>Brave</strong> o instalar <strong>uBlock Origin</strong>.
+        </span>
+      </div>
+
       <div className="max-w-5xl mx-auto w-full p-4 sm:p-6 lg:p-8 mb-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
